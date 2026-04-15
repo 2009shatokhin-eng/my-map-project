@@ -37,7 +37,7 @@
         .gps-btn { background: #1a1a1a; border-color: #444; }
         .gps-active { background: #00bfff !important; color: #000 !important; border-color: #fff !important; }
         
-        /* Компактная подложка точно под размер текста */
+        /* Стили подложек меток */
         .label-black { 
             background: rgba(0,0,0,0.85); 
             color: #fff; 
@@ -54,6 +54,12 @@
             align-items: center;
             justify-content: center;
         }
+
+        /* Цвета для инженерного режима */
+        .lbl-work-open { border-color: #00ffff !important; color: #00ffff !important; }
+        .lbl-work-close { border-color: #ff0000 !important; color: #ff0000 !important; }
+        /* Новая подложка: белая с черным текстом для тех, кто не в работе */
+        .lbl-not-work { background: #fff !important; color: #000 !important; border-color: #000 !important; }
         
         .done-mark { background: #00ff00; color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid #fff; font-size: 22px; }
         
@@ -97,9 +103,9 @@
     <button onclick="manualSync()" id="syncBtn">🔄 СИНХРОНИЗАЦИЯ</button>
     <button onclick="toggleMapInv()">🌙 ТЕМНАЯ КАРТА</button>
     
-    <div id="consVentList" style="display:none; margin-top:8px; padding-top:8px; border-top:1px solid #444; font-size:13px;"></div>
+    <div id="consVentList" style="display:none; margin-top:8px; padding-top:8px; border-top:1px solid #444;"></div>
     
-    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#ccc;">
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#ccc; margin-top:10px;">
         <input type="checkbox" id="autoCenterChk" checked onchange="toggleAutoCenter()">
         Автоцентр карты
     </label>
@@ -124,7 +130,7 @@
     let pressTimer;
     let autoCenter = true;
 
-    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false });
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -4, maxZoom: 2, zoomControl: false });
     const mLayer = L.imageOverlay('plan2.png', [[0,0], [imgH, imgW]]).addTo(map);
     map.fitBounds([[0,0], [imgH, imgW]]);
     const lyr = L.layerGroup().addTo(map);
@@ -202,9 +208,7 @@
                 const accuracyPx = pos.coords.accuracy * 6;
                 if (!accuracyCircle) accuracyCircle = L.circle(mapPos, { radius: accuracyPx, color: '#00ffff', weight: 2, opacity: 0.4, fillOpacity: 0.1 }).addTo(map);
                 else { accuracyCircle.setLatLng(mapPos); accuracyCircle.setRadius(accuracyPx); }
-                
                 if (autoCenter) map.setView(mapPos, map.getZoom(), { animate: true });
-                
                 btn.innerText = "🛰 СЛЕЖЕНИЕ";
                 btn.classList.add('gps-active');
             },
@@ -213,12 +217,7 @@
                 watchId = null;
                 btn.innerText = "🛰 МОЯ ПОЗИЦИЯ";
                 btn.classList.remove('gps-active');
-                let msg = "Ошибка GPS:\n";
-                if (err.code === 1) msg += "Доступ запрещён";
-                else if (err.code === 2) msg += "Позиция недоступна";
-                else if (err.code === 3) msg += "Таймаут";
-                else msg += err.message;
-                alert(msg + "\n\nРазрешите GPS в настройках телефона.");
+                alert("Ошибка GPS: " + err.message);
             },
             { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
         );
@@ -233,44 +232,9 @@
         const dateKey = getDateString(isTomorrow ? 1 : 0);
         let pending = 0;
 
-        let ventListHTML = '';
-        if (mode === 'cons') {
-            ventListHTML = '<div style="font-size:13px;color:#ffea00;margin-bottom:8px;">Вентили на сегодня:</div>';
-            
-            points.forEach(([t, x, y, id]) => {
-                if (t !== 'V') return;
-                const idN = parseInt(id);
-                const isToday = sched[activeIdx]?.includes(idN) || false;
-                const wasYesterday = sched[prevIdx]?.includes(idN) || false;
-
-                if (!isToday && !wasYesterday) return;
-
-                const k = 'V' + id;
-                const shouldBeOpen = isToday;
-                const current = states[k];
-
-                let actionText, color;
-
-                if (shouldBeOpen) {
-                    actionText = (current === 'opened') ? '✅ Уже открыт' : '🔴 Открыть';
-                    color = (current === 'opened') ? '#00ff00' : '#ffea00';
-                } else {
-                    actionText = (current === 'closed') ? '✅ Уже закрыт' : '🔴 Закрыть';
-                    color = (current === 'closed') ? '#00ff00' : '#ff0000';
-                }
-
-                ventListHTML += `
-                    <div onclick="goToVent('${k}', ${x}, ${y})" 
-                         style="padding:8px 10px; background:#222; border-radius:6px; margin-bottom:4px; 
-                                border-left:4px solid ${color}; cursor:pointer;">
-                        <b>V${id}</b> — <span style="color:${color}">${actionText}</span>
-                    </div>`;
-            });
-
-            if (!ventListHTML.includes('V')) ventListHTML += '<div style="color:#666">Нет вентилей для действия</div>';
-        }
-        document.getElementById('consVentList').innerHTML = ventListHTML;
-        document.getElementById('consVentList').style.display = (mode === 'cons') ? 'block' : 'none';
+        // Списки для меню
+        let listOpenHTML = '';
+        let listCloseHTML = '';
 
         points.forEach(([t, x, y, id]) => {
             const k = t + id;
@@ -279,46 +243,69 @@
             const isY = sched[prevIdx]?.includes(idN);
             const statusKey = k + '_' + dateKey;
 
-            let color = '#444', show = true;
+            let color = '#222', show = true;
+            let workType = null; 
 
             if (mode === 'cons') {
-                if (t === 'V' && (isT || isY)) {
-                    const shouldOpen = isT;
-                    color = (states[k] === (shouldOpen ? 'opened' : 'closed')) ? '#00ff88' : '#ffea00';
+                if (t === 'V') {
+                    if (isT || isY) {
+                        const shouldOpen = isT;
+                        workType = shouldOpen ? 'open' : 'close';
+                        color = (states[k] === (shouldOpen ? 'opened' : 'closed')) ? '#00ff88' : '#ffea00';
+                        
+                        const actionText = shouldOpen ? 
+                            (states[k] === 'opened' ? '✅ ОТКРЫТ' : '🔴 ОТКРЫТЬ') : 
+                            (states[k] === 'closed' ? '✅ ЗАКРЫТ' : '🔴 ЗАКРЫТЬ');
+                        const itemColor = (states[k] === (shouldOpen ? 'opened' : 'closed')) ? '#00ff00' : '#ffea00';
+                        
+                        const html = `
+                            <div onclick="goToVent('${k}', ${x}, ${y})" 
+                                 style="padding:8px 10px; background:#222; border-radius:6px; margin-bottom:4px; 
+                                        border-left:4px solid ${itemColor}; cursor:pointer; font-size:12px;">
+                                <b>V${id}</b> — <span style="color:${itemColor}">${actionText}</span>
+                            </div>`;
+                        
+                        if (shouldOpen) listOpenHTML += html; else listCloseHTML += html;
+                    } else {
+                        color = (states[k] === 'opened') ? '#0077ff' : '#333';
+                    }
                 } else if (t === 'S') {
-                    color = (states[k] === 'opened') ? '#0077ff' : '#111';
-                } else show = false;
+                    color = (states[k] === 'opened') ? '#0077ff' : '#222';
+                }
             } else {
                 if (t === 'V' && (isT !== isY)) {
                     color = (states[statusKey] === 'done') ? 'done' : (isT ? '#00ffff' : '#ff0000');
                     if (color !== 'done') pending++;
                 } else show = false;
             }
-            if (show) drawMarker(t, x, y, id, k, color, statusKey, isT && t === 'V');
+            if (show) drawMarker(t, x, y, id, k, color, statusKey, workType);
         });
 
+        // Сборка меню
+        let menuHTML = '';
+        if (mode === 'cons') {
+            if (listOpenHTML) menuHTML += '<div style="color:#00ffff; font-size:11px; margin:10px 0 5px;">🔽 НУЖНО ОТКРЫТЬ:</div>' + listOpenHTML;
+            if (listCloseHTML) menuHTML += '<div style="color:#ff4444; font-size:11px; margin:10px 0 5px;">🔼 НУЖНО ЗАКРЫТЬ:</div>' + listCloseHTML;
+            if (!listOpenHTML && !listCloseHTML) menuHTML = '<div style="color:#666; font-size:12px; padding:10px;">Задач на сегодня нет</div>';
+        }
+        document.getElementById('consVentList').innerHTML = menuHTML;
+        document.getElementById('consVentList').style.display = (mode === 'cons') ? 'block' : 'none';
+        
         document.getElementById('finishBtn').innerText = pending > 0 ? `ЗАДАЧ: ${pending}` : "СХЕМА: OK";
         updateUI();
     }
 
     function goToVent(key, x, y) {
         const pos = [imgH - y, x];
-        map.flyTo(pos, 1.8, { duration: 1.1 });
+        map.flyTo(pos, 1.2, { duration: 1.1 });
         setTimeout(() => {
-            const layers = lyr.getLayers();
-            for (let layer of layers) {
-                if (layer.getLatLng) {
-                    const p = layer.getLatLng();
-                    if (Math.abs(p.lat - pos[0]) < 45 && Math.abs(p.lng - pos[1]) < 45) {
-                        layer.openPopup();
-                        break;
-                    }
-                }
-            }
+            lyr.getLayers().forEach(l => {
+                if (l.getLatLng && Math.abs(l.getLatLng().lat - pos[0]) < 45 && Math.abs(l.getLatLng().lng - pos[1]) < 45) l.openPopup();
+            });
         }, 900);
     }
 
-    function drawMarker(t, x, y, id, k, c, sKey, isActive) {
+    function drawMarker(t, x, y, id, k, c, sKey, workType) {
         const pos = [imgH - y, x];
         let h = `<div style="color:#000; min-width:150px;"><b>${t}${id}</b><div class="popup-btns">`;
         
@@ -336,10 +323,15 @@
             L.circleMarker(pos, { radius: 18, fillColor: c, color: '#fff', weight: 3, fillOpacity: 0.95 }).addTo(lyr).bindPopup(h);
         }
 
-        const lblCls = (mode === 'cons' && isActive) ? 'label-black active-mode' : 'label-black';
-        /* Сбалансированный отступ и авто-размер подложки */
+        let lblExtraCls = '';
+        if (mode === 'cons') {
+            if (workType === 'open') lblExtraCls = 'lbl-work-open';
+            else if (workType === 'close') lblExtraCls = 'lbl-work-close';
+            else if (t === 'V') lblExtraCls = 'lbl-not-work'; // Применяем белый фон
+        }
+
         L.marker([imgH - y + 40, x], { 
-            icon: L.divIcon({ className: lblCls, html: t+id+(notes[k]?'★':''), iconSize: null, iconAnchor: [15, 0] }), 
+            icon: L.divIcon({ className: 'label-black ' + lblExtraCls, html: t+id+(notes[k]?'★':''), iconSize: null, iconAnchor: [15, 0] }), 
             interactive: false 
         }).addTo(lyr);
     }
@@ -411,11 +403,7 @@
 
     function deleteNote(k) {
         if(confirm(`Удалить заметку для ${k}?`)) {
-            delete notes[k];
-            save();
-            sendToCloud();
-            showNotesList();
-            render();
+            delete notes[k]; save(); sendToCloud(); showNotesList(); render();
         }
     }
 
@@ -423,7 +411,6 @@
         const m = document.getElementById('sideMenu'); 
         m.style.display = (m.style.display === 'flex' ? 'none' : 'flex'); 
     }
-    /* Меню больше не сворачивается при переключении режима */
     function setMode(m) { mode = m; render(); }
     function toggleTomorrow() { isTomorrow = !isTomorrow; render(); }
     function toggleMapInv() { 
