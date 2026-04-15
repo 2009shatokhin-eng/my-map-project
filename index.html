@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>BANZAI: STATIC CONTROL v23.5</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root { --panel-h: 13.8vh; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; padding-top: env(safe-area-inset-top); }
+        
+        .ui-panel { 
+            height: var(--panel-h); 
+            display: grid; 
+            grid-template-columns: 1.1fr 1fr 1.15fr 1fr 0.6fr; 
+            gap: 5px; 
+            padding: 8px 10px; 
+            background: #000; 
+            border-bottom: 3px solid #333; 
+            align-items: center; 
+        }
+        
+        @media (max-width: 480px) {
+            .ui-panel { grid-template-columns: 1.25fr 1.1fr 1.25fr 1.1fr 0.7fr; gap: 4px; padding: 6px 8px; }
+            button, select { height: 46px; font-size: 10.5px; }
+        }
+        
+        #map { height: calc(100vh - var(--panel-h)); width: 100vw; background: #000; }
+        .invert-map { filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(1.2); }
+        
+        button, select { 
+            background: #1a1a1a; color: #fff; border: 2px solid #444; 
+            border-radius: 8px; height: 50px; font-weight: bold; font-size: 11px; 
+        }
+        
+        .active-mode { border-color: #ffea00 !important; color: #ffea00 !important; box-shadow: 0 0 5px #ffea00; }
+        .gps-btn { background: #1a1a1a; border-color: #444; }
+        .gps-active { background: #00bfff !important; color: #000 !important; border-color: #fff !important; }
+        
+        /* Компактная подложка точно под размер текста */
+        .label-black { 
+            background: rgba(0,0,0,0.85); 
+            color: #fff; 
+            border: 1.5px solid #fff; 
+            border-radius: 4px; 
+            padding: 2px 5px; 
+            font-weight: bold; 
+            font-size: 15px; 
+            text-align: center; 
+            white-space: nowrap;
+            width: auto !important;
+            height: auto !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .done-mark { background: #00ff00; color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid #fff; font-size: 22px; }
+        
+        #sideMenu { 
+            display: none; position: fixed; top: calc(var(--panel-h) + 5px); right: 10px; 
+            background: #111; border: 2px solid #444; border-radius: 12px; padding: 12px; 
+            z-index: 2000; flex-direction: column; gap: 8px; width: 220px; max-height: 74vh; overflow-y: auto; 
+        }
+
+        .popup-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
+        textarea { width: 100%; margin-top: 8px; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; padding: 5px; }
+        
+        #notesListOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 3000; padding: 20px; box-sizing: border-box; overflow-y: auto;
+        }
+        .note-item { background: #222; padding: 10px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #ffea00; position: relative; }
+
+        .gps-marker { animation: gpsPulse 2s infinite; }
+        @keyframes gpsPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+    </style>
+</head>
+<body>
+
+<div class="ui-panel">
+    <button id="gpsBtn" class="gps-btn" onclick="toggleGPS()">🛰 МОЯ ПОЗИЦИЯ</button>
+    <button id="tmrBtn" onclick="toggleTomorrow()">ЗАВТРА</button>
+    <button id="finishBtn">СХЕМА</button>
+    <div style="width:10px"></div> 
+    <button onclick="toggleMenu()" style="font-size:28px; padding:0 6px;">☰</button>
+</div>
+
+<div id="map"></div>
+
+<div id="sideMenu">
+    <label style="font-size: 10px; color: #888;">ДЕНЬ НЕДЕЛИ:</label>
+    <select id="daySel" onchange="render();" style="width: 100%; height: 40px;"></select>
+    <button onclick="setMode('work')" id="workBtn">⚙️ РАБОЧИЙ</button>
+    <button onclick="setMode('cons')" id="consBtn">🆘 ИНЖЕНЕРНЫЙ</button>
+    <button onclick="showNotesList()" style="color: #ffea00;">📝 ЗАМЕТКИ</button>
+    <button onclick="manualSync()" id="syncBtn">🔄 СИНХРОНИЗАЦИЯ</button>
+    <button onclick="toggleMapInv()">🌙 ТЕМНАЯ КАРТА</button>
+    
+    <div id="consVentList" style="display:none; margin-top:8px; padding-top:8px; border-top:1px solid #444; font-size:13px;"></div>
+    
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#ccc;">
+        <input type="checkbox" id="autoCenterChk" checked onchange="toggleAutoCenter()">
+        Автоцентр карты
+    </label>
+</div>
+
+<div id="notesListOverlay">
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin:0;">Все заметки</h2>
+        <button onclick="document.getElementById('notesListOverlay').style.display='none'" style="height:40px; width:80px;">ЗАКРЫТЬ</button>
+    </div>
+    <div id="notesContainer"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const CLOUD_URL = 'https://script.google.com/macros/s/AKfycby4GaogundwUmoQYvwTw_wykr-N4GHCE2efvgAeU9yeLTVijdShEMNEwhefeT9Vb_SdmA/exec';
+    const CONFIG = { VER: 'b_master_v23.5' };
+
+    const imgW = 5356, imgH = 3130;
+    let mode = 'work', mapInv = false, isTomorrow = false, watchId = null;
+    let gpsMarker = null, accuracyCircle = null;
+    let pressTimer;
+    let autoCenter = true;
+
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false });
+    const mLayer = L.imageOverlay('plan2.png', [[0,0], [imgH, imgW]]).addTo(map);
+    map.fitBounds([[0,0], [imgH, imgW]]);
+    const lyr = L.layerGroup().addTo(map);
+
+    const dSel = document.getElementById('daySel');
+    ["ВС","ПН","ВТ","СР","ЧТ","ПТ","СБ"].forEach((d,i) => dSel.add(new Option(d,i)));
+    dSel.value = new Date().getDay();
+
+    let states = JSON.parse(localStorage.getItem(CONFIG.VER+'_s') || '{}');
+    let notes = JSON.parse(localStorage.getItem(CONFIG.VER+'_n') || '{}');
+
+    const sched = {
+        0:[3,5,6,8,13,14,16,17,20,28],1:[3,5,6,8,13,14,16,18,28,29],
+        2:[4,5,6,8,13,14,18,28],3:[3,5,6,8,13,14,16,19,21,22,23,28],
+        4:[3,5,6,8,13,14,16,20,28],5:[13,14,16,17,28],
+        6:[3,4,5,6,8,13,14,16,18,19,21,22,23,28,29]
+    };
+
+    const points = [ 
+        ['V',408,2520,'1',57.153616,60.012377],['V',442,2532,'2'],['V',492,2258,'3',57.153763,60.011196],['V',474,2171,'4',57.153790,60.010685],
+        ['V',951,2162,'14'],['V',1001,2132,'13',57.155365,60.010686],['V',1025,2139,'15'],['V',1035,2067,'12'],
+        ['V',525,1999,'5',57.153861,60.009856],['V',500,1964,'7',57.153856,60.009429],['V',462,1926,'6',57.153787,60.009456],['V',1032,1867,'11'],
+        ['V',514,1754,'8'],['V',574,1197,'9'],['V',1096,1324,'10'],
+        ['V',1691,2491,'16',57.157449,60.012556],['V',1737,2512,'17',57.157517,60.012605],['V',1863,2361,'20',57.157847,60.011664],
+        ['V',1755,2286,'18',57.157711,60.011420],['V',1802,2253,'19',57.157770,60.011307],['V',1989,2206,'21',57.158330,60.011053],
+        ['V',2158,2154,'22',57.158810,60.010756],['V',2347,2094,'23',57.159430,60.010554],['V',2501,2071,'24'],
+        ['V',2523,2394,'25'],['V',2522,2478,'26'],['V',2793,2481,'27'],
+        ['V',3472,1902,'28',57.163021,60.009219],['V',3573,1925,'29',57.163093,60.009371],['V',4318,2111,'31'],
+        ['V',4285,1928,'30'],['V',4352,1898,'32'],['V',4383,1872,'33'],
+        ['V',4451,1870,'34'],['V',4309,1544,'35'],['V',4376,1544,'36'],['V',4330,1407,'37'],
+        ['S',214,1176,'1',57.153089,60.005272],['S',379,1251,'2'],['S',663,1073,'3'],['S',1164,1072,'4'],
+        ['S',1109,1161,'5'],['S',1012,1535,'6'],['S',1028,1346,'6a'],['S',997,1716,'7'],
+        ['S',992,1898,'8'],['S',977,2083,'9'],['S',1554,2010,'10'],['S',1426,1788,'11'],
+        ['S',1239,1183,'12'],['S',1280,1084,'13',57.156205,60.004773],['S',1441,990,'14'],['S',1602,860,'15',57.157178,60.003586],
+        ['S',2846,2136,'16'],['S',3049,2472,'17'],['S',3022,2906,'18',57.161333,60.014780],['S',3567,2797,'19',57.163017,60.014287],
+        ['S',3221,2012,'20'],['S',3318,1907,'21'],['S',3348,1905,'22'],['S',3347,1904,'23'],
+        ['S',3408,1903,'24'],['S',3417,2008,'25'],['S',3630,2013,'26'],['S',3660,1887,'27'],
+        ['S',3847,2001,'28'],['S',4886,2130,'29',57.167036,60.010564],['S',4946,1966,'30'],['S',4937,1524,'31'],
+        ['S',4906,1243,'32'],['S',4838,1205,'33',57.166854,60.005677],['S',3592,1561,'34'],['S',3651,1232,'35'],
+        ['S',3603,1044,'36',57.163249,60.004636],['S',4009,852,'37']
+    ];
+
+    function gpsToMap(lat, lng) {
+        const p1 = { lat: 57.153089, lng: 60.005272, x: 214, y: 1176 };
+        const p2 = { lat: 57.167036, lng: 60.010564, x: 4886, y: 2130 };
+        const dx = (p2.x - p1.x) / (p2.lng - p1.lng);
+        const dy = (p2.y - p1.y) / (p2.lat - p1.lat);
+        return [p1.y + (lat - p1.lat) * dy, p1.x + (lng - p1.lng) * dx];
+    }
+
+    function getDateString(offset = 0) {
+        let d = new Date();
+        const target = parseInt(dSel.value);
+        d.setDate(d.getDate() + (target - d.getDay()) + offset);
+        return d.toISOString().split('T')[0];
+    }
+
+    function toggleGPS() {
+        const btn = document.getElementById('gpsBtn');
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+            if (gpsMarker) map.removeLayer(gpsMarker);
+            if (accuracyCircle) map.removeLayer(accuracyCircle);
+            btn.innerText = "🛰 МОЯ ПОЗИЦИЯ";
+            btn.classList.remove('gps-active');
+            return;
+        }
+        btn.innerText = "🛰 ПОИСК...";
+        watchId = navigator.geolocation.watchPosition(
+            pos => {
+                const mapPos = gpsToMap(pos.coords.latitude, pos.coords.longitude);
+                if (!gpsMarker) gpsMarker = L.circleMarker(mapPos, { radius: 18, color: '#fff', fillColor: '#00bfff', fillOpacity: 1, weight: 4, className: 'gps-marker' }).addTo(map);
+                else gpsMarker.setLatLng(mapPos);
+                const accuracyPx = pos.coords.accuracy * 6;
+                if (!accuracyCircle) accuracyCircle = L.circle(mapPos, { radius: accuracyPx, color: '#00ffff', weight: 2, opacity: 0.4, fillOpacity: 0.1 }).addTo(map);
+                else { accuracyCircle.setLatLng(mapPos); accuracyCircle.setRadius(accuracyPx); }
+                
+                if (autoCenter) map.setView(mapPos, map.getZoom(), { animate: true });
+                
+                btn.innerText = "🛰 СЛЕЖЕНИЕ";
+                btn.classList.add('gps-active');
+            },
+            err => {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+                btn.innerText = "🛰 МОЯ ПОЗИЦИЯ";
+                btn.classList.remove('gps-active');
+                let msg = "Ошибка GPS:\n";
+                if (err.code === 1) msg += "Доступ запрещён";
+                else if (err.code === 2) msg += "Позиция недоступна";
+                else if (err.code === 3) msg += "Таймаут";
+                else msg += err.message;
+                alert(msg + "\n\nРазрешите GPS в настройках телефона.");
+            },
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        );
+    }
+
+    function toggleAutoCenter() { autoCenter = document.getElementById('autoCenterChk').checked; }
+
+    function render() {
+        lyr.clearLayers();
+        const activeIdx = (parseInt(dSel.value) + (isTomorrow ? 1 : 0)) % 7;
+        const prevIdx = (activeIdx + 6) % 7;
+        const dateKey = getDateString(isTomorrow ? 1 : 0);
+        let pending = 0;
+
+        let ventListHTML = '';
+        if (mode === 'cons') {
+            ventListHTML = '<div style="font-size:13px;color:#ffea00;margin-bottom:8px;">Вентили на сегодня:</div>';
+            
+            points.forEach(([t, x, y, id]) => {
+                if (t !== 'V') return;
+                const idN = parseInt(id);
+                const isToday = sched[activeIdx]?.includes(idN) || false;
+                const wasYesterday = sched[prevIdx]?.includes(idN) || false;
+
+                if (!isToday && !wasYesterday) return;
+
+                const k = 'V' + id;
+                const shouldBeOpen = isToday;
+                const current = states[k];
+
+                let actionText, color;
+
+                if (shouldBeOpen) {
+                    actionText = (current === 'opened') ? '✅ Уже открыт' : '🔴 Открыть';
+                    color = (current === 'opened') ? '#00ff00' : '#ffea00';
+                } else {
+                    actionText = (current === 'closed') ? '✅ Уже закрыт' : '🔴 Закрыть';
+                    color = (current === 'closed') ? '#00ff00' : '#ff0000';
+                }
+
+                ventListHTML += `
+                    <div onclick="goToVent('${k}', ${x}, ${y})" 
+                         style="padding:8px 10px; background:#222; border-radius:6px; margin-bottom:4px; 
+                                border-left:4px solid ${color}; cursor:pointer;">
+                        <b>V${id}</b> — <span style="color:${color}">${actionText}</span>
+                    </div>`;
+            });
+
+            if (!ventListHTML.includes('V')) ventListHTML += '<div style="color:#666">Нет вентилей для действия</div>';
+        }
+        document.getElementById('consVentList').innerHTML = ventListHTML;
+        document.getElementById('consVentList').style.display = (mode === 'cons') ? 'block' : 'none';
+
+        points.forEach(([t, x, y, id]) => {
+            const k = t + id;
+            const idN = parseInt(id);
+            const isT = sched[activeIdx]?.includes(idN);
+            const isY = sched[prevIdx]?.includes(idN);
+            const statusKey = k + '_' + dateKey;
+
+            let color = '#444', show = true;
+
+            if (mode === 'cons') {
+                if (t === 'V' && (isT || isY)) {
+                    const shouldOpen = isT;
+                    color = (states[k] === (shouldOpen ? 'opened' : 'closed')) ? '#00ff88' : '#ffea00';
+                } else if (t === 'S') {
+                    color = (states[k] === 'opened') ? '#0077ff' : '#111';
+                } else show = false;
+            } else {
+                if (t === 'V' && (isT !== isY)) {
+                    color = (states[statusKey] === 'done') ? 'done' : (isT ? '#00ffff' : '#ff0000');
+                    if (color !== 'done') pending++;
+                } else show = false;
+            }
+            if (show) drawMarker(t, x, y, id, k, color, statusKey, isT && t === 'V');
+        });
+
+        document.getElementById('finishBtn').innerText = pending > 0 ? `ЗАДАЧ: ${pending}` : "СХЕМА: OK";
+        updateUI();
+    }
+
+    function goToVent(key, x, y) {
+        const pos = [imgH - y, x];
+        map.flyTo(pos, 1.8, { duration: 1.1 });
+        setTimeout(() => {
+            const layers = lyr.getLayers();
+            for (let layer of layers) {
+                if (layer.getLatLng) {
+                    const p = layer.getLatLng();
+                    if (Math.abs(p.lat - pos[0]) < 45 && Math.abs(p.lng - pos[1]) < 45) {
+                        layer.openPopup();
+                        break;
+                    }
+                }
+            }
+        }, 900);
+    }
+
+    function drawMarker(t, x, y, id, k, c, sKey, isActive) {
+        const pos = [imgH - y, x];
+        let h = `<div style="color:#000; min-width:150px;"><b>${t}${id}</b><div class="popup-btns">`;
+        
+        if (mode === 'cons') {
+            h += `<button style="background:#28a745;color:#fff" onclick="setS('${k}','opened')">ОТКРЫТЬ</button>`;
+            h += `<button style="background:#dc3545;color:#fff" onclick="setS('${k}','closed')">ЗАКРЫТЬ</button>`;
+        } else {
+            h += (c === 'done') ? `<button style="grid-column:span 2" onclick="setS('${sKey}','wait')">ОТМЕНА</button>` : `<button style="background:#28a745;color:#fff;grid-column:span 2" onclick="setS('${sKey}','done')">ГОТОВО</button>`;
+        }
+        h += `</div><textarea onchange="setN('${k}',this.value)" placeholder="Заметка...">${notes[k]||''}</textarea></div>`;
+
+        if (c === 'done') {
+            L.marker(pos, { icon: L.divIcon({className:'done-mark', html:'✓', iconSize:[30,30]}) }).addTo(lyr).bindPopup(h);
+        } else {
+            L.circleMarker(pos, { radius: 18, fillColor: c, color: '#fff', weight: 3, fillOpacity: 0.95 }).addTo(lyr).bindPopup(h);
+        }
+
+        const lblCls = (mode === 'cons' && isActive) ? 'label-black active-mode' : 'label-black';
+        /* Сбалансированный отступ и авто-размер подложки */
+        L.marker([imgH - y + 40, x], { 
+            icon: L.divIcon({ className: lblCls, html: t+id+(notes[k]?'★':''), iconSize: null, iconAnchor: [15, 0] }), 
+            interactive: false 
+        }).addTo(lyr);
+    }
+
+    function startHold() {
+        pressTimer = setTimeout(() => {
+            if(confirm("Отметить всю схему выполненной?")) {
+                const dateStr = getDateString(isTomorrow ? 1 : 0);
+                const activeIdx = (parseInt(dSel.value) + (isTomorrow ? 1 : 0)) % 7;
+                points.forEach(([t,x,y,id]) => {
+                    const i = parseInt(id);
+                    if (t === 'V' && sched[activeIdx]?.includes(i) !== sched[(activeIdx+6)%7]?.includes(i)) {
+                        states[t + id + '_' + dateStr] = 'done';
+                    }
+                });
+                save(); sendToCloud(); render();
+            }
+        }, 1300);
+    }
+
+    function endHold() { clearTimeout(pressTimer); }
+
+    window.onload = () => {
+        const finishBtn = document.getElementById('finishBtn');
+        finishBtn.addEventListener('pointerdown', startHold);
+        finishBtn.addEventListener('pointerup', endHold);
+        finishBtn.addEventListener('pointerleave', endHold);
+        finishBtn.addEventListener('pointercancel', endHold);
+    };
+
+    function setS(k, s) { states[k] = s; save(); sendToCloud(); render(); }
+    function setN(k, v) { if(!v) delete notes[k]; else notes[k] = v; save(); sendToCloud(); render(); }
+    function save() {
+        localStorage.setItem(CONFIG.VER+'_s', JSON.stringify(states));
+        localStorage.setItem(CONFIG.VER+'_n', JSON.stringify(notes));
+    }
+    async function sendToCloud() { 
+        try { fetch(CLOUD_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({states, notes}) }); } catch(e) {} 
+    }
+    async function manualSync() {
+        const btn = document.getElementById('syncBtn'); 
+        btn.innerText = "🔄 ЗАГРУЗКА...";
+        try {
+            const resp = await fetch(CLOUD_URL + '?t=' + Date.now());
+            const data = await resp.json();
+            if (data.states) states = {...states, ...data.states};
+            if (data.notes) notes = {...notes, ...data.notes};
+            save(); alert("✅ Синхронизация успешна!");
+        } catch(e) { alert("❌ Нет связи."); }
+        btn.innerText = "🔄 СИНХРОНИЗАЦИЯ"; render();
+    }
+
+    function showNotesList() {
+        const container = document.getElementById('notesContainer');
+        container.innerHTML = '';
+        let count = 0;
+        for (let k in notes) {
+            count++;
+            const div = document.createElement('div');
+            div.className = 'note-item';
+            div.innerHTML = `<b>${k}:</b><p style="margin:5px 0;">${notes[k]}</p>
+                            <button onclick="deleteNote('${k}')" style="background:#500; height:30px; font-size:10px;">УДАЛИТЬ</button>`;
+            container.appendChild(div);
+        }
+        if(count === 0) container.innerHTML = '<p>Заметок пока нет.</p>';
+        document.getElementById('notesListOverlay').style.display = 'block';
+        toggleMenu();
+    }
+
+    function deleteNote(k) {
+        if(confirm(`Удалить заметку для ${k}?`)) {
+            delete notes[k];
+            save();
+            sendToCloud();
+            showNotesList();
+            render();
+        }
+    }
+
+    function toggleMenu() { 
+        const m = document.getElementById('sideMenu'); 
+        m.style.display = (m.style.display === 'flex' ? 'none' : 'flex'); 
+    }
+    /* Меню больше не сворачивается при переключении режима */
+    function setMode(m) { mode = m; render(); }
+    function toggleTomorrow() { isTomorrow = !isTomorrow; render(); }
+    function toggleMapInv() { 
+        mapInv = !mapInv; 
+        mLayer.getElement().className = mapInv ? 'leaflet-image-layer invert-map' : 'leaflet-image-layer'; 
+    }
+    function updateUI() {
+        document.getElementById('tmrBtn').className = isTomorrow ? 'active-mode' : '';
+        document.getElementById('workBtn').className = mode === 'work' ? 'active-mode' : '';
+        document.getElementById('consBtn').className = mode === 'cons' ? 'active-mode' : '';
+    }
+
+    render();
+</script>
+</body>
+</html>
