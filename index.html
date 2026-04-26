@@ -2,231 +2,191 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>BANZAI: STATIC CONTROL v23.9</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>BANZAI YANDEX GPS PRO</title>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=50b1a67c-b3e5-433f-a378-4f8ff228e7d7&lang=ru_RU" type="text/javascript"></script>
     <style>
-        :root { --panel-h: 13.8vh; }
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; padding-top: env(safe-area-inset-top); }
-        .ui-panel { height: var(--panel-h); display: grid; grid-template-columns: 1.1fr 1fr 1.15fr 1fr 0.6fr; gap: 5px; padding: 8px 10px; background: #000; border-bottom: 3px solid #333; align-items: center; }
-        @media (max-width: 480px) { .ui-panel { grid-template-columns: 1.25fr 1.1fr 1.25fr 1.1fr 0.7fr; gap: 4px; padding: 6px 8px; } button, select { height: 46px; font-size: 10.5px; } }
-        #map { height: calc(100vh - var(--panel-h)); width: 100vw; background: #000; }
-        .invert-map { filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(1.2); }
-        button, select { background: #1a1a1a; color: #fff; border: 2px solid #444; border-radius: 8px; height: 50px; font-weight: bold; font-size: 11px; }
-        .active-mode { border-color: #ffea00 !important; color: #ffea00 !important; box-shadow: 0 0 5px #ffea00; }
-        .gps-btn { background: #1a1a1a; border-color: #444; }
-        .gps-active { background: #00bfff !important; color: #000 !important; border-color: #fff !important; }
-        .label-black { background: rgba(0,0,0,0.85); color: #fff; border: 1.5px solid #fff; border-radius: 4px; padding: 2px 5px; font-weight: bold; font-size: 15px; text-align: center; white-space: nowrap; width: auto !important; height: auto !important; display: flex; align-items: center; justify-content: center; }
-        .lbl-work-open { border-color: #0000ff !important; color: #0000ff !important; }
-        .lbl-work-close { border-color: #ff0000 !important; color: #ff0000 !important; }
-        .lbl-not-work { background: #333 !important; color: #ccc !important; border-color: #555 !important; }
-        .done-mark { background: #00ff00; color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid #fff; font-size: 22px; }
-        #sideMenu { display: none; position: fixed; top: calc(var(--panel-h) + 5px); right: 10px; background: #111; border: 2px solid #444; border-radius: 12px; padding: 12px; z-index: 2000; flex-direction: column; gap: 8px; width: 220px; max-height: 74vh; overflow-y: auto; }
-        .popup-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
-        textarea { width: 100%; margin-top: 8px; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; padding: 5px; }
-        #notesListOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .note-item { background: #222; padding: 10px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #ffea00; position: relative; }
-        .gps-marker { animation: gpsPulse 2s infinite; }
-        @keyframes gpsPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        :root { --panel-h: 70px; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+        #map { width: 100vw; height: calc(100vh - var(--panel-h)); position: absolute; top: var(--panel-h); }
+        .ui-panel { height: var(--panel-h); display: grid; grid-template-columns: 1.2fr 1fr 1fr 0.6fr; gap: 8px; padding: 10px; background: #111; box-sizing: border-box; }
+        button { height: 100%; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .active-mode { background: #005cc5 !important; border-color: #fff; }
+        .bad-gps { background: #b58900 !important; } /* Цвет для плохой точности */
+        .balloon-content { color: #000; padding: 5px; font-size: 14px; }
+        .balloon-content button { background: #007bff; color: #fff; margin-top: 10px; width: 100%; height: 40px; }
     </style>
 </head>
 <body>
 
 <div class="ui-panel">
-    <button id="gpsBtn" class="gps-btn" onclick="toggleGPS()">🛰 МОЯ ПОЗИЦИЯ</button>
+    <button id="gpsBtn" onclick="toggleGPS()">🛰 GPS: ВЫКЛ</button>
     <button id="tmrBtn" onclick="toggleTomorrow()">ЗАВТРА</button>
-    <button id="finishBtn">СХЕМА</button>
-    <div style="width:10px"></div> 
-    <button onclick="toggleMenu()" style="font-size:28px; padding:0 6px;">☰</button>
+    <button onclick="manualSync()">СИНХРО</button>
+    <button onclick="location.reload()">🔄</button>
 </div>
 
 <div id="map"></div>
 
-<div id="sideMenu">
-    <label style="font-size: 10px; color: #888;">ДЕНЬ НЕДЕЛИ:</label>
-    <select id="daySel" onchange="render();" style="width: 100%; height: 40px;"></select>
-    <button onclick="setMode('work')" id="workBtn">⚙️ РАБОЧИЙ</button>
-    <button onclick="setMode('cons')" id="consBtn">🆘 ИНЖЕНЕРНЫЙ</button>
-    <button onclick="showNotesList()" style="color: #ffea00;">📝 ЗАМЕТКИ</button>
-    <button onclick="manualSync()" id="syncBtn">🔄 СИНХРОНИЗАЦИЯ</button>
-    <button onclick="toggleMapInv()">🌙 ТЕМНАЯ КАРТА</button>
-    <div id="consVentList" style="display:none; margin-top:8px; padding-top:8px; border-top:1px solid #444;"></div>
-    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#ccc; margin-top:10px;">
-        <input type="checkbox" id="autoCenterChk" checked onchange="toggleAutoCenter()"> Автоцентр
-    </label>
-</div>
-
-<div id="notesListOverlay">
-    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="margin:0;">Все заметки</h2>
-        <button onclick="document.getElementById('notesListOverlay').style.display='none'" style="height:40px; width:80px;">ЗАКРЫТЬ</button>
-    </div>
-    <div id="notesContainer"></div>
-</div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const CLOUD_URL = 'https://script.google.com/macros/s/AKfycby4GaogundwUmoQYvwTw_wykr-N4GHCE2efvgAeU9yeLTVijdShEMNEwhefeT9Vb_SdmA/exec';
-    const CONFIG = { VER: 'b_master_v23.9' };
-    const imgW = 5356, imgH = 3130;
-    let mode = 'work', mapInv = false, isTomorrow = false, watchId = null;
-    let gpsMarker = null, accuracyCircle = null, pressTimer, autoCenter = true;
-
-    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -4, maxZoom: 2, zoomControl: false });
-    const mLayer = L.imageOverlay('plan2.png', [[0,0], [imgH, imgW]]).addTo(map);
-    map.fitBounds([[0,0], [imgH, imgW]]);
-    const lyr = L.layerGroup().addTo(map);
-
-    const dSel = document.getElementById('daySel');
-    ["ВС","ПН","ВТ","СР","ЧТ","ПТ","СБ"].forEach((d,i) => dSel.add(new Option(d,i)));
-    const now = new Date(); dSel.value = now.getDay();
-    const curTotal = now.getHours() * 60 + now.getMinutes();
-    const limit = (now.getDay() === 6) ? 1200 : 1170;
-    if (curTotal >= limit) isTomorrow = true;
-
-    let states = JSON.parse(localStorage.getItem(CONFIG.VER+'_s') || '{}');
-    let notes = JSON.parse(localStorage.getItem(CONFIG.VER+'_n') || '{}');
-
-    const sched = {
-        0:[3,5,6,8,13,14,16,17,20,28], 1:[3,5,6,8,13,14,16,18,28,29],
-        2:[4,5,6,8,13,14,18,28], 3:[3,5,6,8,13,14,16,19,21,22,23,28],
-        4:[3,5,6,8,13,14,16,20,28], 5:[13,14,16,17,28],
-        6:[3,4,5,6,8,13,14,16,18,19,21,22,23,28,29]
+    // URL вашего Google Apps Script
+    const CLOUD_URL = 'https://script.google.com/macros/s/AKfycby5P8fV0N9L-qJ7B6E4qK9pWp_XvLz0S0uYf_Z4z7Yf_Z4z7Yf_Z4z7Yf/exec';
+    
+    const SCHED = {
+        work: [3, 4, 8, 13, 16, 18, 19, 21, 23, 28, 29],
+        sat: [3, 4, 5, 6, 8, 13, 14, 16, 18, 19, 21, 22, 23, 28, 29]
     };
 
-    const points = [ 
-        ['V',408,2520,'1',57.153616,60.012377],['V',442,2532,'2'],['V',492,2258,'3',57.153763,60.011196],['V',474,2171,'4',57.153790,60.010685],
-        ['V',951,2162,'14'],['V',1001,2132,'13',57.155365,60.010686],['V',1025,2139,'15'],['V',1035,2067,'12'],
-        ['V',525,1999,'5',57.153861,60.009856],['V',500,1964,'7',57.153856,60.009429],['V',462,1926,'6',57.153787,60.009456],['V',1032,1867,'11'],
-        ['V',514,1754,'8'],['V',574,1197,'9'],['V',1096,1324,'10'],
-        ['V',1691,2491,'16',57.157449,60.012556],['V',1737,2512,'17',57.157517,60.012605],['V',1863,2361,'20',57.157847,60.011664],
-        ['V',1755,2286,'18',57.157711,60.011420],['V',1802,2253,'19',57.157770,60.011307],['V',1989,2206,'21',57.158330,60.011053],
-        ['V',2158,2154,'22',57.158810,60.010756],['V',2347,2094,'23',57.159430,60.010554],['V',2501,2071,'24'],
-        ['V',2523,2394,'25'],['V',2522,2478,'26'],['V',2793,2481,'27'],
-        ['V',3472,1902,'28',57.163021,60.009219],['V',3573,1925,'29',57.163093,60.009371],['V',4318,2111,'31'],
-        ['V',4285,1928,'30'],['V',4352,1898,'32'],['V',4383,1872,'33'],
-        ['V',4451,1870,'34'],['V',4309,1544,'35'],['V',4376,1544,'36'],['V',4330,1407,'37'],
-        ['S',214,1176,'1',57.153089,60.005272],['S',379,1251,'2'],['S',663,1073,'3'],['S',1164,1072,'4'],
-        ['S',1109,1161,'5'],['S',1012,1535,'6'],['S',1028,1346,'6a'],['S',997,1716,'7'],
-        ['S',992,1898,'8'],['S',977,2083,'9'],['S',1554,2010,'10'],['S',1426,1788,'11'],
-        ['S',1239,1183,'12'],['S',1280,1084,'13',57.156205,60.004773],['S',1441,990,'14'],['S',1602,860,'15',57.157178,60.003586],
-        ['S',2846,2136,'16'],['S',3049,2472,'17'],['S',3022,2906,'18',57.161333,60.014780],['S',3567,2797,'19',57.163017,60.014287],
-        ['S',3221,2012,'20'],['S',3318,1907,'21'],['S',3348,1905,'22'],['S',3347,1904,'23'],
-        ['S',3408,1903,'24'],['S',3417,2008,'25'],['S',3630,2013,'26'],['S',3660,1887,'27'],
-        ['S',3847,2001,'28'],['S',4886,2130,'29',57.167036,60.010564],['S',4946,1966,'30'],['S',4937,1524,'31'],
-        ['S',4906,1243,'32'],['S',4838,1205,'33',57.166854,60.005677],['S',3592,1561,'34'],['S',3651,1232,'35'],
-        ['S',3603,1044,'36',57.163249,60.004636],['S',4009,852,'37']
+    const points = [
+        ["V", 1, 57.153616, 60.012377], ["V", 3, 57.153763, 60.011196], ["V", 4, 57.153835, 60.011082],
+        ["V", 13, 57.153791, 60.011370], ["V", 16, 57.153733, 60.011409], ["V", 17, 57.153738, 60.011488],
+        ["V", 18, 57.153766, 60.011531], ["V", 19, 57.153796, 60.011565], ["V", 20, 57.153823, 60.011603],
+        ["V", 21, 57.153851, 60.011648], ["V", 22, 57.153878, 60.011690], ["V", 23, 57.153913, 60.011740],
+        ["V", 28, 57.154030, 60.011915], ["V", 29, 57.154070, 60.011977], ["S", 1, 57.153089, 60.005272],
+        ["S", 2, 57.153205, 60.005423], ["S", 3, 57.153315, 60.005572], ["S", 4, 57.153434, 60.005727],
+        ["S", 5, 57.153549, 60.005882], ["S", 15, 57.153479, 60.011342], ["S", 21, 57.153648, 60.011568],
+        ["S", 25, 57.153748, 60.011718], ["S", 29, 57.153856, 60.011874], ["S", 30, 57.153883, 60.011915],
+        ["S", 31, 57.153911, 60.011956], ["S", 32, 57.153935, 60.011993]
     ];
 
-    function calibrateGPS() {
-        const data = points.filter(p => p[4] && p[5]);
-        let sLa=0, sLn=0, sX=0, sY=0; data.forEach(p => { sLa+=p[4]; sLn+=p[5]; sX+=p[1]; sY+=p[2]; });
-        const aLa=sLa/data.length, aLn=sLn/data.length, aX=sX/data.length, aY=sY/data.length;
-        let nX=0, nY=0, dLn=0, dLa=0;
-        data.forEach(p => { nX+=(p[5]-aLn)*(p[1]-aX); dLn+=Math.pow(p[5]-aLn, 2); nY+=(p[4]-aLa)*(p[2]-aY); dLa+=Math.pow(p[4]-aLa, 2); });
-        return { sx: nX/dLn, sy: nY/dLa, aLa, aLn, aX, aY };
-    }
-    const cal = calibrateGPS();
+    let myMap, watchId, myPosMarker;
+    let isTomorrow = false;
+    let states = JSON.parse(localStorage.getItem('banzai_s') || '{}');
 
-    function gpsToMap(lat, lng) {
-        const x = cal.aX + (lng - cal.aLn) * cal.sx;
-        const y = cal.aY + (lat - cal.aLa) * cal.sy;
-        return [imgH - y, x];
+    ymaps.ready(() => {
+        myMap = new ymaps.Map("map", {
+            center: [57.1537, 60.0115],
+            zoom: 19,
+            type: 'yandex#hybrid',
+            controls: ['zoomControl', 'typeSelector', 'geolocationControl']
+        });
+        render();
+    });
+
+    function render() {
+        myMap.geoObjects.removeAll();
+        if (myPosMarker) myMap.geoObjects.add(myPosMarker);
+
+        document.getElementById('tmrBtn').className = isTomorrow ? 'active-mode' : '';
+
+        const now = new Date();
+        if (isTomorrow) now.setDate(now.getDate() + 1);
+        const day = now.getDay();
+        const currentSched = (day === 6) ? SCHED.sat : SCHED.work;
+
+        points.forEach(p => {
+            const id = p[0] + p[1];
+            const isInSched = currentSched.includes(p[1]) && p[0] === 'V';
+            const isDone = states[id] === 1;
+
+            let color = "#777"; 
+            if (isInSched) color = "#007bff"; 
+            if (isDone) color = "#28a745";    
+
+            const placemark = new ymaps.Placemark([p[2], p[3]], {
+                balloonContent: `
+                    <div class="balloon-content">
+                        <b>Точка: ${id}</b><br>
+                        ${isInSched ? '<i>(В плане на сегодня)</i>' : ''}
+                        <button onclick="togglePoint('${id}')">
+                            ${isDone ? 'СБРОСИТЬ' : 'ОТМЕТИТЬ ГОТОВЫМ'}
+                        </button>
+                    </div>`
+            }, {
+                preset: 'islands#dotIcon',
+                iconColor: color,
+                draggable: true 
+            });
+
+            placemark.events.add('dragend', function(e) {
+                const newCoords = placemark.geometry.getCoordinates();
+                console.log(`Новые координаты для ${id}:`, newCoords[0].toFixed(6), newCoords[1].toFixed(6));
+            });
+
+            myMap.geoObjects.add(placemark);
+        });
     }
+
+    function togglePoint(id) {
+        states[id] = states[id] === 1 ? 0 : 1;
+        localStorage.setItem('banzai_s', JSON.stringify(states));
+        render();
+        sendToCloud();
+    }
+
+    function toggleTomorrow() { isTomorrow = !isTomorrow; render(); }
 
     function toggleGPS() {
         const btn = document.getElementById('gpsBtn');
         if (watchId) {
-            navigator.geolocation.clearWatch(watchId); watchId = null;
-            if (gpsMarker) map.removeLayer(gpsMarker); if (accuracyCircle) map.removeLayer(accuracyCircle);
-            btn.innerText = "🛰 МОЯ ПОЗИЦИЯ"; btn.classList.remove('gps-active'); return;
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+            btn.innerText = "🛰 GPS: ВЫКЛ";
+            btn.classList.remove('active-mode', 'bad-gps');
+            if (myPosMarker) myMap.geoObjects.remove(myPosMarker);
+        } else {
+            btn.classList.add('active-mode');
+            
+            // ГЕОЛОКАЦИЯ С УЛУЧШЕННЫМИ НАСТРОЙКАМИ
+            watchId = navigator.geolocation.watchPosition(pos => {
+                const c = [pos.coords.latitude, pos.coords.longitude];
+                const accuracy = Math.round(pos.coords.accuracy);
+                
+                btn.innerText = `🛰 ${accuracy}м`;
+                
+                // Визуальное предупреждение, если точность плохая (больше 25 метров)
+                if (accuracy > 25) {
+                    btn.classList.add('bad-gps');
+                } else {
+                    btn.classList.remove('bad-gps');
+                }
+
+                if (!myPosMarker) {
+                    myPosMarker = new ymaps.Placemark(c, {}, {
+                        preset: 'islands#personIcon', 
+                        iconColor: '#ff0000',
+                        zIndex: 1000
+                    });
+                    myMap.geoObjects.add(myPosMarker);
+                } else {
+                    myPosMarker.geometry.setCoordinates(c);
+                }
+
+                // Центрируем карту только если точность выше 20 метров, чтобы не "болтало"
+                if (accuracy < 20) {
+                    myMap.setCenter(c);
+                }
+            }, (err) => {
+                alert("Ошибка GPS: " + err.message);
+                toggleGPS(); // Выключаем при ошибке
+            }, {
+                enableHighAccuracy: true, // ПРИНУДИТЕЛЬНЫЙ GPS
+                maximumAge: 0,            // БЕЗ КЭША
+                timeout: 10000            // ЖДАТЬ 10 СЕКУНД
+            });
         }
-        btn.innerText = "🛰 ПОИСК...";
-        watchId = navigator.geolocation.watchPosition(pos => {
-            const acc = pos.coords.accuracy;
-            // Фильтр точности: если хуже 100 метров, позицию не обновляем
-            if (acc > 100) { btn.innerText = "🛰 ПЛОХОЙ СИГНАЛ (" + Math.round(acc) + "м)"; return; }
-
-            const mapPos = gpsToMap(pos.coords.latitude, pos.coords.longitude);
-            if (!gpsMarker) gpsMarker = L.circleMarker(mapPos, { radius: 12, color: '#fff', fillColor: '#00bfff', fillOpacity: 1, weight: 3, className: 'gps-marker' }).addTo(map);
-            else gpsMarker.setLatLng(mapPos);
-            
-            const rPx = acc * (Math.abs(cal.sx) / 111320);
-            if (!accuracyCircle) accuracyCircle = L.circle(mapPos, { radius: rPx, color: '#00ffff', weight: 1, fillOpacity: 0.1 }).addTo(map);
-            else { accuracyCircle.setLatLng(mapPos); accuracyCircle.setRadius(rPx); }
-            
-            if (autoCenter) map.setView(mapPos, map.getZoom());
-            btn.innerText = "🛰 СЛЕЖЕНИЕ (" + Math.round(acc) + "м)"; btn.classList.add('gps-active');
-        }, e => { alert("GPS Error: " + e.message); }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
     }
 
-    function render() {
-        lyr.clearLayers();
-        const activeIdx = (parseInt(dSel.value) + (isTomorrow ? 1 : 0)) % 7;
-        const prevIdx = (activeIdx + 6) % 7, dateKey = new Date().toISOString().split('T')[0];
-        let pending = 0, listOpenHTML = '', listCloseHTML = '';
+    async function sendToCloud() { 
+        try { 
+            fetch(CLOUD_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({states}) }); 
+        } catch(e) { console.error("Cloud Error", e); } 
+    }
 
-        points.forEach(([t, x, y, id]) => {
-            const k = t + id, idN = parseInt(id), isT = sched[activeIdx]?.includes(idN), isY = sched[prevIdx]?.includes(idN);
-            let color = '#222', show = true, workType = null;
-
-            if (mode === 'cons') {
-                if (t === 'V' && (isT || isY)) {
-                    const shouldOpen = isT; workType = shouldOpen ? 'open' : 'close';
-                    // ЦВЕТА: Зеленый если выполнено, Синий если открыто, Красный если закрыто
-                    if (states[k] === (shouldOpen ? 'opened' : 'closed')) color = '#00ff88';
-                    else if (states[k] === 'opened') color = '#0000ff';
-                    else if (states[k] === 'closed') color = '#ff0000';
-                    else color = shouldOpen ? '#0000ff' : '#ff0000';
-
-                    const itemColor = (states[k] === (shouldOpen ? 'opened' : 'closed')) ? '#00ff00' : (shouldOpen ? '#0000ff' : '#ff4444');
-                    const html = `<div onclick="goToVent('${k}',${x},${y})" style="padding:8px;background:#222;border-radius:6px;margin-bottom:4px;border-left:4px solid ${itemColor};cursor:pointer;font-size:12px;"><b>V${id}</b> — ${states[k]===(shouldOpen?'opened':'closed')?'✅':'🔴'} ${shouldOpen?'ОТКРЫТЬ':'ЗАКРЫТЬ'}</div>`;
-                    if (shouldOpen) listOpenHTML += html; else listCloseHTML += html;
-                } else color = (states[k] === 'opened') ? '#0000ff' : (states[k] === 'closed' ? '#ff0000' : '#333');
-            } else {
-                if (t === 'V' && (isT !== isY)) {
-                    color = (states[k+'_'+dateKey] === 'done') ? 'done' : (isT ? '#0000ff' : '#ff0000');
-                    if (color !== 'done') pending++;
-                } else show = false;
+    async function manualSync() { 
+        try {
+            const r = await fetch(CLOUD_URL + '?t=' + Date.now());
+            const d = await r.json();
+            if (d.states) { 
+                states = d.states; 
+                localStorage.setItem('banzai_s', JSON.stringify(states)); 
+                render(); 
+                alert("Синхронизация успешна");
             }
-            if (show) drawMarker(t, x, y, id, k, color, k+'_'+dateKey, workType);
-        });
-        document.getElementById('consVentList').innerHTML = (listOpenHTML || listCloseHTML) ? listOpenHTML + listCloseHTML : 'Задач нет';
-        document.getElementById('consVentList').style.display = mode === 'cons' ? 'block' : 'none';
-        document.getElementById('finishBtn').innerText = pending > 0 ? `ЗАДАЧ: ${pending}` : "СХЕМА: OK";
-        updateUI();
+        } catch(e) { 
+            alert("Ошибка связи с облаком"); 
+        }
     }
-
-    function drawMarker(t, x, y, id, k, c, sKey, workType) {
-        const pos = [imgH - y, x];
-        let h = `<div style="color:#000;min-width:150px;"><b>${t}${id}</b><div class="popup-btns">`;
-        if (mode === 'cons') {
-            h += `<button style="background:#0000ff;color:#fff" onclick="setS('${k}','opened')">ОТКРЫТЬ</button>`;
-            h += `<button style="background:#ff0000;color:#fff" onclick="setS('${k}','closed')">ЗАКРЫТЬ</button>`;
-        } else h += (c === 'done') ? `<button style="grid-column:span 2" onclick="setS('${sKey}','wait')">ОТМЕНА</button>` : `<button style="background:#28a745;color:#fff;grid-column:span 2" onclick="setS('${sKey}','done')">ГОТОВО</button>`;
-        h += `</div><textarea onchange="setN('${k}',this.value)" placeholder="Заметка...">${notes[k]||''}</textarea></div>`;
-
-        if (c === 'done') L.marker(pos, { icon: L.divIcon({className:'done-mark', html:'✓', iconSize:[30,30]}) }).addTo(lyr).bindPopup(h);
-        else L.circleMarker(pos, { radius: 15, fillColor: c, color: '#fff', weight: 3, fillOpacity: 0.9 }).addTo(lyr).bindPopup(h);
-
-        let lblCls = mode === 'cons' ? (workType === 'open' ? 'lbl-work-open' : (workType === 'close' ? 'lbl-work-close' : 'lbl-not-work')) : '';
-        L.marker([imgH - y + 40, x], { icon: L.divIcon({ className: 'label-black ' + lblCls, html: t+id+(notes[k]?'★':''), iconAnchor: [15, 0] }), interactive: false }).addTo(lyr);
-    }
-
-    function goToVent(k, x, y) { map.flyTo([imgH - y, x], 1); }
-    function setS(k, s) { states[k] = s; save(); sendToCloud(); render(); }
-    function setN(k, v) { if(!v) delete notes[k]; else notes[k] = v; save(); sendToCloud(); render(); }
-    function save() { localStorage.setItem(CONFIG.VER+'_s', JSON.stringify(states)); localStorage.setItem(CONFIG.VER+'_n', JSON.stringify(notes)); }
-    async function sendToCloud() { try { fetch(CLOUD_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({states, notes}) }); } catch(e) {} }
-    async function manualSync() { const r = await fetch(CLOUD_URL + '?t=' + Date.now()); const d = await r.json(); if(d.states) states = {...states, ...d.states}; if(d.notes) notes = {...notes, ...d.notes}; save(); render(); alert("OK"); }
-    function showNotesList() { document.getElementById('notesListOverlay').style.display = 'block'; }
-    function toggleMenu() { const m = document.getElementById('sideMenu'); m.style.display = m.style.display === 'flex' ? 'none' : 'flex'; }
-    function setMode(m) { mode = m; render(); }
-    function toggleTomorrow() { isTomorrow = !isTomorrow; render(); }
-    function toggleMapInv() { mapInv = !mapInv; mLayer.getElement().className = mapInv ? 'leaflet-image-layer invert-map' : 'leaflet-image-layer'; }
-    function toggleAutoCenter() { autoCenter = document.getElementById('autoCenterChk').checked; }
-    function updateUI() { document.getElementById('tmrBtn').className = isTomorrow ? 'active-mode' : ''; document.getElementById('workBtn').className = mode === 'work' ? 'active-mode' : ''; document.getElementById('consBtn').className = mode === 'cons' ? 'active-mode' : ''; }
-    render();
 </script>
 </body>
 </html>
