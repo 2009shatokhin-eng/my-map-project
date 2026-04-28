@@ -9,20 +9,18 @@
         :root { --panel-h: 70px; --accent: #005cc5; --red: #ff0000; --green: #28a745; --blue: #007bff; --gray: #777; }
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
         
-        /* Верхняя панель */
         .ui-top { height: var(--panel-h); display: grid; grid-template-columns: 1fr 1fr 1fr 0.6fr; gap: 8px; padding: 10px; background: #111; box-sizing: border-box; border-bottom: 1px solid #333; position: relative; z-index: 10; }
         #map { width: 100vw; height: calc(100vh - var(--panel-h)); position: absolute; top: var(--panel-h); }
 
-        button { height: 100%; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        button { height: 100%; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .active-btn { background: var(--accent) !important; border-color: #fff; }
         
         .task-counter { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; font-size: 10px; color: #aaa; }
         .task-counter b { font-size: 16px; color: #00ff00; }
 
-        /* Меню ("Бутерброд") */
-        #menu { position: fixed; right: -300px; top: 0; width: 280px; height: 100%; background: #1a1a1a; z-index: 2000; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px; box-shadow: -10px 0 20px rgba(0,0,0,0.7); overflow-y: auto; box-sizing: border-box; border-left: 1px solid #333; }
+        #menu { position: fixed; right: -300px; top: 0; width: 280px; height: 100%; background: #1a1a1a; z-index: 2000; transition: 0.3s; padding: 20px; box-shadow: -10px 0 20px rgba(0,0,0,0.7); overflow-y: auto; box-sizing: border-box; border-left: 1px solid #333; }
         #menu.open { right: 0; }
-        .close-menu { position: absolute; top: 15px; right: 15px; font-size: 24px; color: #777; cursor: pointer; padding: 5px; line-height: 1; }
+        .close-menu { position: absolute; top: 15px; right: 15px; font-size: 24px; color: #777; cursor: pointer; padding: 5px; }
         
         .badge { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; background: red; border-radius: 50%; display: none; }
         
@@ -32,27 +30,25 @@
         .day-content { padding: 10px; background: #111; display: none; font-size: 12px; color: #aaa; }
         .v-link { display: inline-block; padding: 6px 10px; margin: 3px; background: #333; border-radius: 4px; color: #fff; cursor: pointer; }
 
-        /* Кнопка сброса фильтра в общем стиле */
-        .btn-reset-filter { width: 100%; height: 40px; margin-bottom: 15px; background: #333; color: #fff; border: 1px solid #555; border-radius: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .btn-reset-filter { width: 100%; height: 40px; margin-bottom: 15px; background: #333; color: #fff; border: 1px solid #555; border-radius: 6px; font-size: 11px; font-weight: bold; }
+        
+        .note-card { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; border-left: 3px solid var(--accent); }
+        .del-note { color: var(--red); float: right; cursor: pointer; font-weight: bold; }
 
-        .sync-footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; text-align: center; }
-
-        .note-card { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; border-left: 3px solid var(--accent); cursor: pointer; }
-        .note-card:active { background: #444; }
-        .del-note { color: var(--red); float: right; cursor: pointer; font-weight: bold; padding: 0 5px; }
-
-        /* Балун */
-        .balloon-content { color: #000; min-width: 180px; padding: 5px; }
-        .note-input { width: 100%; height: 65px; margin: 8px 0; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        .btn-done { width: 100%; height: 45px; background: var(--green); color: #fff; border: none; border-radius: 4px; font-weight: bold; margin-bottom: 6px; }
-        .btn-undo { width: 100%; height: 35px; background: #f0f0f0; border: 1px solid #ccc; color: #333; border-radius: 4px; font-size: 11px; }
+        /* КОМПАКТНЫЙ БАЛУН */
+        .balloon-content { color: #000; min-width: 160px; padding: 2px; }
+        .balloon-content b { font-size: 14px; display: block; margin-bottom: 4px; }
+        .note-input { width: 100%; height: 35px; margin: 4px 0; padding: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; resize: none; }
+        .btn-row { display: flex; gap: 4px; }
+        .btn-done { flex: 2; height: 36px; background: var(--green); color: #fff; border: none; border-radius: 4px; font-weight: bold; }
+        .btn-undo { flex: 1; height: 36px; background: #f0f0f0; border: 1px solid #ccc; color: #333; border-radius: 4px; font-size: 10px; }
     </style>
 </head>
 <body>
 
 <div class="ui-top">
     <button id="gpsBtn" onclick="toggleGPS()">🛰 GPS: ВЫКЛ</button>
-    <button id="tmrBtn" onclick="toggleTomorrow()">ЗАВТРА</button>
+    <button id="tmrBtn" onclick="toggleTomorrowManually()">ЗАВТРА</button>
     <div class="task-counter">ЗАДАЧИ<b id="taskCountVal">0</b></div>
     <button onclick="toggleMenu()" style="position:relative">☰ <div id="menuBadge" class="badge"></div></button>
 </div>
@@ -62,16 +58,12 @@
 <div id="menu">
     <div class="close-menu" onclick="toggleMenu()">✕</div>
     <h3 style="margin: 0 0 20px 0; font-size:16px; color: #ccc;">ГРАФИК ОБХОДА</h3>
-    
     <button onclick="closeDayView()" id="resetFilterBtn" class="btn-reset-filter" style="display:none;">СБРОСИТЬ ФИЛЬТР ДНЯ</button>
-    
     <div id="daysList"></div>
-    
     <h4 style="margin: 25px 0 10px 0; font-size: 14px; color: #888;">ЗАМЕТКИ</h4>
     <div id="notesList"></div>
-
-    <div class="sync-footer">
-        <button onclick="manualSync()" style="width: 100%; height: 40px; background: #222; border: 1px solid #444; color: #777;">СИНХРОНИЗАЦИЯ С ОБЛАКОМ</button>
+    <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
+        <button onclick="manualSync()" style="width: 100%; height: 40px; background: #222; color: #777; border: 1px solid #444;">СИНХРОНИЗАЦИЯ</button>
     </div>
 </div>
 
@@ -86,17 +78,18 @@
     };
 
     const points = [
-        ["V", 1, 57.153616, 60.012377], ["V", 3, 57.153763, 60.011196], ["V", 4, 57.153790, 60.010685],
-        ["V", 5, 57.153861, 60.009856], ["V", 6, 57.153787, 60.009456], ["V", 7, 57.153856, 60.009429],
-        ["V", 8, 57.153911, 60.010000], ["V", 13, 57.155365, 60.010686], ["V", 14, 57.156000, 60.011000],
-        ["V", 16, 57.157449, 60.012556], ["V", 17, 57.157517, 60.012605], ["V", 18, 57.157711, 60.011420],
-        ["V", 19, 57.157770, 60.011307], ["V", 20, 57.157847, 60.011664], ["V", 21, 57.158330, 60.011053],
-        ["V", 22, 57.158810, 60.010756], ["V", 23, 57.159430, 60.010554], ["V", 28, 57.163021, 60.009219],
-        ["V", 29, 57.163093, 60.009371]
+        ["V",1,57.153616,60.012377], ["V",3,57.153763,60.011196], ["V",4,57.153790,60.010685],
+        ["V",5,57.153861,60.009856], ["V",6,57.153787,60.009456], ["V",7,57.153856,60.009429],
+        ["V",8,57.153911,60.010000], ["V",13,57.155365,60.010686], ["V",14,57.156000,60.011000],
+        ["V",16,57.157449,60.012556], ["V",17,57.157517,60.012605], ["V",18,57.157711,60.011420],
+        ["V",19,57.157770,60.011307], ["V",20,57.157847,60.011664], ["V",21,57.158330,60.011053],
+        ["V",22,57.158810,60.010756], ["V",23,57.159430,60.010554], ["V",28,57.163021,60.009219],
+        ["V",29,57.163093,60.009371]
     ];
 
     let myMap, watchId, myPosMarker;
     let isTmr = false;
+    let manualTmrOverride = false; // Флаг, если пользователь сам нажал кнопку
     let selectedDay = null; 
     let states = JSON.parse(localStorage.getItem('banzai_v18_s') || '{}');
     let notes = JSON.parse(localStorage.getItem('banzai_v18_n') || '{}');
@@ -104,63 +97,73 @@
 
     ymaps.ready(() => {
         myMap = new ymaps.Map("map", { center: [57.1580, 60.0110], zoom: 16, type: 'yandex#hybrid', controls: [] });
-        checkAutoClosure();
+        checkAutoTime();
         render();
     });
 
-    function checkAutoClosure() {
-        const now = new Date();
-        const lastCheck = localStorage.getItem('banzai_last_check') || "";
-        const todayStr = now.toDateString();
-        if (now.getHours() >= 19 || lastCheck !== todayStr) {
-            const dayToClose = (now.getHours() < 19) ? (now.getDay() - 1 + 7) % 7 : now.getDay();
-            (sched[dayToClose] || []).forEach(id => { if (!states['V'+id]) states['V'+id] = 1; });
-            localStorage.setItem('banzai_v18_s', JSON.stringify(states));
-            localStorage.setItem('banzai_last_check', todayStr);
+    // Проверка времени: если после 19:00, включаем "ЗАВТРА"
+    function checkAutoTime() {
+        if (!manualTmrOverride) {
+            const hours = new Date().getHours();
+            isTmr = (hours >= 19);
+            updateTmrButtonUI();
         }
     }
 
     function render() {
         myMap.geoObjects.removeAll();
         pointObjects = {};
+        
         const now = new Date();
         if (isTmr) now.setDate(now.getDate() + 1);
         
         const curIdx = now.getDay();
         const prevIdx = (curIdx - 1 + 7) % 7;
         
-        const planToday = sched[curIdx] || [];
-        const planYesterday = sched[prevIdx] || [];
+        const planCurrent = sched[curIdx] || [];
+        const planPrevious = sched[prevIdx] || [];
         
         let count = 0;
 
         points.forEach(p => {
             const id = p[1];
             const fullId = p[0] + id;
-            const inToday = planToday.includes(id);
-            const inYesterday = planYesterday.includes(id);
+            const inToday = planCurrent.includes(id);
+            const inYesterday = planPrevious.includes(id);
             const isDone = states[fullId] === 1;
 
             let visible = false;
             let color = '#777'; 
 
             if (selectedDay !== null) {
+                // Режим просмотра конкретного дня
                 visible = sched[selectedDay].includes(id);
                 color = isDone ? '#28a745' : '#007bff';
             } else {
-                if (inToday && !inYesterday) { visible = true; color = isDone ? '#28a745' : '#007bff'; if(!isDone) count++; } 
-                else if (!inToday && inYesterday) { visible = true; color = isDone ? '#28a745' : '#ff0000'; if(!isDone) count++; } 
-                else if (inToday && inYesterday) { visible = true; color = isDone ? '#28a745' : '#777777'; } 
+                // УЛЬТРА-ФИЛЬТР: только действия
+                if (inToday && !inYesterday) { 
+                    visible = true; 
+                    color = isDone ? '#28a745' : '#007bff'; // Синий (Открыть)
+                    if(!isDone) count++;
+                } 
+                else if (!inToday && inYesterday) { 
+                    visible = true; 
+                    color = isDone ? '#28a745' : '#ff0000'; // Красный (Закрыть)
+                    if(!isDone) count++;
+                }
+                // Серые точки (inToday && inYesterday) не отрисовываются (visible = false)
             }
 
             if (visible) {
                 const placemark = new ymaps.Placemark([p[2], p[3]], {
                     balloonContent: `
                         <div class="balloon-content">
-                            <b>Точка V${id}</b>
-                            <textarea class="note-input" id="ni_${fullId}">${notes[fullId] || ''}</textarea>
-                            <button class="btn-done" onclick="saveData('${fullId}', 1)">ГОТОВО</button>
-                            <button class="btn-undo" onclick="saveData('${fullId}', 0)">ОТМЕНА (В РАБОТУ)</button>
+                            <b>Вентиль V${id}</b>
+                            <textarea class="note-input" id="ni_${fullId}" placeholder="Заметка...">${notes[fullId] || ''}</textarea>
+                            <div class="btn-row">
+                                <button class="btn-done" onclick="saveData('${fullId}', 1)">ГОТОВО</button>
+                                <button class="btn-undo" onclick="saveData('${fullId}', 0)">В РАБОТУ</button>
+                            </div>
                         </div>`
                 }, { preset: 'islands#dotIcon', iconColor: color });
                 myMap.geoObjects.add(placemark);
@@ -214,14 +217,23 @@
         document.getElementById('menuBadge').style.display = nc > 0 ? 'block' : 'none';
     }
 
+    function toggleTomorrowManually() {
+        manualTmrOverride = true; 
+        isTmr = !isTmr;
+        selectedDay = null;
+        updateTmrButtonUI();
+        render();
+    }
+
+    function updateTmrButtonUI() {
+        document.getElementById('tmrBtn').classList.toggle('active-btn', isTmr);
+    }
+
     function selectDay(idx) { selectedDay = (selectedDay === idx) ? null : idx; render(); }
     function closeDayView() { selectedDay = null; render(); }
     
     function focusV(id) {
-        if (!pointObjects[id]) {
-            selectedDay = null;
-            render();
-        }
+        if (!pointObjects[id]) { selectedDay = null; render(); }
         setTimeout(() => {
             if (pointObjects[id]) {
                 const coords = pointObjects[id].geometry.getCoordinates();
@@ -229,11 +241,10 @@
                 pointObjects[id].balloon.open();
                 if (window.innerWidth < 600) toggleMenu();
             }
-        }, 100);
+        }, 120);
     }
 
     function deleteNote(id) { notes[id] = ""; localStorage.setItem('banzai_v18_n', JSON.stringify(notes)); updateMenu(); render(); }
-    function toggleTomorrow() { isTmr = !isTmr; selectedDay = null; document.getElementById('tmrBtn').classList.toggle('active-btn', isTmr); render(); }
 
     function toggleGPS() {
         const btn = document.getElementById('gpsBtn');
@@ -262,8 +273,8 @@
         try {
             const r = await fetch(CLOUD_URL + '?t=' + Date.now());
             const d = await r.json();
-            if (d.states) { states = d.states; notes = d.notes || {}; render(); alert("Данные из облака загружены"); }
-        } catch(e) { alert("Ошибка связи с облаком"); }
+            if (d.states) { states = d.states; notes = d.notes || {}; render(); alert("Данные загружены"); }
+        } catch(e) { alert("Ошибка связи"); }
     }
 </script>
 </body>
