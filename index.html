@@ -3,41 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>BANZAI CRM PRO v2026</title>
+    <title>BANZAI CRM 2026</title>
     <script src="https://api-maps.yandex.ru/2.1/?apikey=50b1a67c-b3e5-433f-a378-4f8ff228e7d7&lang=ru_RU" type="text/javascript"></script>
     <style>
         :root { --panel-h: 70px; --accent: #005cc5; --red: #ff0000; --green: #28a745; --blue: #007bff; --gray: #777; }
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
-        
         .ui-top { height: var(--panel-h); display: grid; grid-template-columns: 1fr 1fr 1fr 0.6fr; gap: 8px; padding: 10px; background: #111; box-sizing: border-box; border-bottom: 1px solid #333; position: relative; z-index: 10; }
         #map { width: 100vw; height: calc(100vh - var(--panel-h)); position: absolute; top: var(--panel-h); }
-
-        button { height: 100%; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button { height: 100%; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; }
         .active-btn { background: var(--accent) !important; border-color: #fff; }
-        
         .task-counter { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; font-size: 10px; color: #aaa; }
         .task-counter b { font-size: 16px; color: #00ff00; }
-
         #menu { position: fixed; right: -300px; top: 0; width: 280px; height: 100%; background: #1a1a1a; z-index: 2000; transition: 0.3s; padding: 20px; box-shadow: -10px 0 20px rgba(0,0,0,0.7); overflow-y: auto; box-sizing: border-box; border-left: 1px solid #333; }
         #menu.open { right: 0; }
         .close-menu { position: absolute; top: 15px; right: 15px; font-size: 24px; color: #777; cursor: pointer; padding: 5px; }
-        
-        .badge { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; background: red; border-radius: 50%; display: none; }
-        
         .day-box { margin-bottom: 8px; border: 1px solid #333; border-radius: 5px; }
         .day-header { padding: 12px; background: #252525; cursor: pointer; display: flex; justify-content: space-between; font-size: 13px; }
         .day-header.viewing { border: 1px solid var(--blue); background: #002b5c; }
-        .day-content { padding: 10px; background: #111; display: none; font-size: 12px; color: #aaa; }
-        .v-link { display: inline-block; padding: 6px 10px; margin: 3px; background: #333; border-radius: 4px; color: #fff; cursor: pointer; }
-
+        .day-content { padding: 10px; background: #111; display: none; font-size: 11px; color: #aaa; }
+        .v-group { margin-bottom: 10px; }
+        .v-group-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block; }
+        .v-link { display: inline-block; padding: 5px 8px; margin: 2px; background: #333; border-radius: 4px; color: #fff; cursor: pointer; }
+        .v-link.v-open { border-left: 3px solid var(--blue); }
+        .v-link.v-close { border-left: 3px solid var(--red); }
         .btn-reset-filter { width: 100%; height: 40px; margin-bottom: 15px; background: #333; color: #fff; border: 1px solid #555; border-radius: 6px; font-size: 11px; font-weight: bold; }
-        
-        .note-card { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; border-left: 3px solid var(--accent); }
+        .note-card { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 12px; border-left: 3px solid var(--accent); }
         .del-note { color: var(--red); float: right; cursor: pointer; font-weight: bold; }
-
-        /* КОМПАКТНЫЙ БАЛУН */
         .balloon-content { color: #000; min-width: 160px; padding: 2px; }
-        .balloon-content b { font-size: 14px; display: block; margin-bottom: 4px; }
         .note-input { width: 100%; height: 35px; margin: 4px 0; padding: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; resize: none; }
         .btn-row { display: flex; gap: 4px; }
         .btn-done { flex: 2; height: 36px; background: var(--green); color: #fff; border: none; border-radius: 4px; font-weight: bold; }
@@ -50,7 +42,7 @@
     <button id="gpsBtn" onclick="toggleGPS()">🛰 GPS: ВЫКЛ</button>
     <button id="tmrBtn" onclick="toggleTomorrowManually()">ЗАВТРА</button>
     <div class="task-counter">ЗАДАЧИ<b id="taskCountVal">0</b></div>
-    <button onclick="toggleMenu()" style="position:relative">☰ <div id="menuBadge" class="badge"></div></button>
+    <button onclick="toggleMenu()" style="position:relative">☰ <div id="menuBadge" style="position:absolute; top:2px; right:2px; width:8px; height:8px; background:red; border-radius:50%; display:none;"></div></button>
 </div>
 
 <div id="map"></div>
@@ -62,14 +54,9 @@
     <div id="daysList"></div>
     <h4 style="margin: 25px 0 10px 0; font-size: 14px; color: #888;">ЗАМЕТКИ</h4>
     <div id="notesList"></div>
-    <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
-        <button onclick="manualSync()" style="width: 100%; height: 40px; background: #222; color: #777; border: 1px solid #444;">СИНХРОНИЗАЦИЯ</button>
-    </div>
 </div>
 
 <script>
-    const CLOUD_URL = 'https://script.google.com/macros/s/AKfycby5P8fV0N9L-qJ7B6E4qK9pWp_XvLz0S0uYf_Z4z7Yf_Z4z7Yf_Z4z7Yf/exec';
-    
     const sched = {
         0:[3,5,6,8,13,14,16,17,20,28], 1:[3,5,6,8,13,14,16,18,28,29], 
         2:[4,5,6,8,13,14,18,28], 3:[3,5,6,8,13,14,16,19,21,22,23,28], 
@@ -88,11 +75,9 @@
     ];
 
     let myMap, watchId, myPosMarker;
-    let isTmr = false;
-    let manualTmrOverride = false; // Флаг, если пользователь сам нажал кнопку
-    let selectedDay = null; 
-    let states = JSON.parse(localStorage.getItem('banzai_v18_s') || '{}');
-    let notes = JSON.parse(localStorage.getItem('banzai_v18_n') || '{}');
+    let isTmr = false, manualTmrOverride = false, selectedDay = null;
+    let states = JSON.parse(localStorage.getItem('banzai_v19_s') || '{}');
+    let notes = JSON.parse(localStorage.getItem('banzai_v19_n') || '{}');
     let pointObjects = {};
 
     ymaps.ready(() => {
@@ -101,71 +86,81 @@
         render();
     });
 
-    // Проверка времени: если после 19:00, включаем "ЗАВТРА"
     function checkAutoTime() {
         if (!manualTmrOverride) {
-            const hours = new Date().getHours();
-            isTmr = (hours >= 19);
+            isTmr = (new Date().getHours() >= 19);
             updateTmrButtonUI();
         }
+    }
+
+    function getDateKey() {
+        const d = new Date();
+        if (isTmr) d.setDate(d.getDate() + 1);
+        return d.toISOString().split('T')[0];
     }
 
     function render() {
         myMap.geoObjects.removeAll();
         pointObjects = {};
-        
+        const dateKey = getDateKey();
         const now = new Date();
         if (isTmr) now.setDate(now.getDate() + 1);
         
         const curIdx = now.getDay();
         const prevIdx = (curIdx - 1 + 7) % 7;
-        
-        const planCurrent = sched[curIdx] || [];
-        const planPrevious = sched[prevIdx] || [];
-        
         let count = 0;
 
         points.forEach(p => {
-            const id = p[1];
-            const fullId = p[0] + id;
-            const inToday = planCurrent.includes(id);
-            const inYesterday = planPrevious.includes(id);
-            const isDone = states[fullId] === 1;
-
-            let visible = false;
-            let color = '#777'; 
+            const id = p[1], fullId = p[0] + id;
+            const isDone = states[dateKey + '_' + fullId] === 1;
+            
+            let color = null; 
+            let opacity = 1;
 
             if (selectedDay !== null) {
-                // Режим просмотра конкретного дня
-                visible = sched[selectedDay].includes(id);
-                color = isDone ? '#28a745' : '#007bff';
-            } else {
-                // УЛЬТРА-ФИЛЬТР: только действия
-                if (inToday && !inYesterday) { 
-                    visible = true; 
-                    color = isDone ? '#28a745' : '#007bff'; // Синий (Открыть)
-                    if(!isDone) count++;
-                } 
-                else if (!inToday && inYesterday) { 
-                    visible = true; 
-                    color = isDone ? '#28a745' : '#ff0000'; // Красный (Закрыть)
-                    if(!isDone) count++;
+                // РЕЖИМ ПРОСМОТРА ДНЯ
+                const sPrevIdx = (selectedDay - 1 + 7) % 7;
+                const inSelected = (sched[selectedDay] || []).includes(id);
+                const inPrev = (sched[sPrevIdx] || []).includes(id);
+
+                if (inSelected && !inPrev) { 
+                    color = '#007bff'; // Синий: Открыть
+                } else if (!inSelected && inPrev) { 
+                    color = '#ff0000'; // Красный: Закрыть
+                } else {
+                    // СЕРЫЕ МЕТКИ (состояние: Белый = открыт, Темный = закрыт)
+                    color = inSelected ? '#ffffff' : '#333333'; 
+                    opacity = 0.4;
                 }
-                // Серые точки (inToday && inYesterday) не отрисовываются (visible = false)
+            } else {
+                // РАБОЧИЙ РЕЖИМ (Серые метки скрыты)
+                const planCurrent = sched[curIdx] || [];
+                const planPrevious = sched[prevIdx] || [];
+                const inToday = planCurrent.includes(id);
+                const inYesterday = planPrevious.includes(id);
+
+                if (inToday && !inYesterday) { 
+                    color = isDone ? '#28a745' : '#007bff'; 
+                    if(!isDone) count++; 
+                }
+                else if (!inToday && inYesterday) { 
+                    color = isDone ? '#28a745' : '#ff0000'; 
+                    if(!isDone) count++; 
+                }
             }
 
-            if (visible) {
+            if (color) {
                 const placemark = new ymaps.Placemark([p[2], p[3]], {
-                    balloonContent: `
-                        <div class="balloon-content">
-                            <b>Вентиль V${id}</b>
-                            <textarea class="note-input" id="ni_${fullId}" placeholder="Заметка...">${notes[fullId] || ''}</textarea>
-                            <div class="btn-row">
-                                <button class="btn-done" onclick="saveData('${fullId}', 1)">ГОТОВО</button>
-                                <button class="btn-undo" onclick="saveData('${fullId}', 0)">В РАБОТУ</button>
-                            </div>
-                        </div>`
-                }, { preset: 'islands#dotIcon', iconColor: color });
+                    balloonContent: `<div class="balloon-content"><b>Вентиль V${id}</b>
+                        <textarea class="note-input" id="ni_${fullId}" placeholder="Заметка...">${notes[fullId] || ''}</textarea>
+                        <div class="btn-row"><button class="btn-done" onclick="saveData('${fullId}', 1)">ГОТОВО</button>
+                        <button class="btn-undo" onclick="saveData('${fullId}', 0)">В РАБОТУ</button></div></div>`
+                }, { 
+                    preset: 'islands#dotIcon', 
+                    iconColor: color, 
+                    balloonAutoPan: false,
+                    opacity: opacity
+                });
                 myMap.geoObjects.add(placemark);
                 pointObjects[id] = placemark;
             }
@@ -178,12 +173,11 @@
 
     function saveData(id, status) {
         notes[id] = document.getElementById('ni_'+id).value;
-        states[id] = status;
-        localStorage.setItem('banzai_v18_s', JSON.stringify(states));
-        localStorage.setItem('banzai_v18_n', JSON.stringify(notes));
+        states[getDateKey() + '_' + id] = status;
+        localStorage.setItem('banzai_v19_s', JSON.stringify(states));
+        localStorage.setItem('banzai_v19_n', JSON.stringify(notes));
         myMap.balloon.close();
         render();
-        sendToCloud();
     }
 
     function updateMenu() {
@@ -191,44 +185,30 @@
         let h = '';
         days.forEach((name, i) => {
             const isSelected = selectedDay === i;
-            h += `<div class="day-box">
-                <div class="day-header ${isSelected ? 'viewing' : ''}" onclick="selectDay(${i})">
-                    <span>${name}</span> <span>${sched[i].length} V</span>
-                </div>
-                <div class="day-content" style="display: ${isSelected ? 'block' : 'none'}">
-                    ${sched[i].map(v => `<span class="v-link" onclick="focusV(${v})">V${v}</span>`).join('')}
-                </div>
-            </div>`;
+            const prev = (i - 1 + 7) % 7;
+            const toOpen = sched[i].filter(v => !sched[prev].includes(v));
+            const toClose = sched[prev].filter(v => !sched[i].includes(v));
+
+            h += `<div class="day-box"><div class="day-header ${isSelected ? 'viewing' : ''}" onclick="selectDay(${i})">
+                  <span>${name}</span> <span>${toOpen.length + toClose.length} задач</span></div>
+                  <div class="day-content" style="display: ${isSelected ? 'block' : 'none'}">
+                    <div class="v-group"><span class="v-group-title" style="color:var(--blue)">Открыть:</span>
+                    ${toOpen.map(v => `<span class="v-link v-open" onclick="focusV(${v})">V${v}</span>`).join('')}</div>
+                    <div class="v-group"><span class="v-group-title" style="color:var(--red)">Закрыть:</span>
+                    ${toClose.map(v => `<span class="v-link v-close" onclick="focusV(${v})">V${v}</span>`).join('')}</div>
+                  </div></div>`;
         });
         document.getElementById('daysList').innerHTML = h;
-        
         let nh = '', nc = 0;
-        for (let id in notes) { 
-            if (notes[id]) { 
-                nc++; 
-                const numId = id.replace(/\D/g,'');
-                nh += `<div class="note-card" onclick="focusV(${numId})">
-                        <span class="del-note" onclick="event.stopPropagation(); deleteNote('${id}')">✕</span>
-                        <b>${id}:</b> ${notes[id]}
-                       </div>`; 
-            } 
-        }
+        for (let id in notes) { if (notes[id]) { nc++; const numId = id.replace(/\D/g,'');
+            nh += `<div class="note-card" onclick="focusV(${numId})"><span class="del-note" onclick="event.stopPropagation(); deleteNote('${id}')">✕</span><b>${id}:</b> ${notes[id]}</div>`; 
+        } }
         document.getElementById('notesList').innerHTML = nh || '<div style="color:#444">Заметок нет</div>';
         document.getElementById('menuBadge').style.display = nc > 0 ? 'block' : 'none';
     }
 
-    function toggleTomorrowManually() {
-        manualTmrOverride = true; 
-        isTmr = !isTmr;
-        selectedDay = null;
-        updateTmrButtonUI();
-        render();
-    }
-
-    function updateTmrButtonUI() {
-        document.getElementById('tmrBtn').classList.toggle('active-btn', isTmr);
-    }
-
+    function toggleTomorrowManually() { manualTmrOverride = true; isTmr = !isTmr; selectedDay = null; updateTmrButtonUI(); render(); }
+    function updateTmrButtonUI() { document.getElementById('tmrBtn').classList.toggle('active-btn', isTmr); }
     function selectDay(idx) { selectedDay = (selectedDay === idx) ? null : idx; render(); }
     function closeDayView() { selectedDay = null; render(); }
     
@@ -238,44 +218,27 @@
             if (pointObjects[id]) {
                 const coords = pointObjects[id].geometry.getCoordinates();
                 myMap.setCenter(coords, 18, {duration: 300});
-                pointObjects[id].balloon.open();
-                if (window.innerWidth < 600) toggleMenu();
+                pointObjects[id].balloon.open().then(() => {
+                    const inp = document.getElementById('ni_V'+id);
+                    if(inp) setTimeout(() => inp.focus(), 300);
+                });
+                if (window.innerWidth < 600) document.getElementById('menu').classList.remove('open');
             }
-        }, 120);
+        }, 150);
     }
 
-    function deleteNote(id) { notes[id] = ""; localStorage.setItem('banzai_v18_n', JSON.stringify(notes)); updateMenu(); render(); }
-
+    function deleteNote(id) { notes[id] = ""; localStorage.setItem('banzai_v19_n', JSON.stringify(notes)); updateMenu(); render(); }
     function toggleGPS() {
         const btn = document.getElementById('gpsBtn');
-        if (watchId) {
-            navigator.geolocation.clearWatch(watchId); watchId = null; 
-            btn.classList.remove('active-btn'); btn.innerText = "🛰 GPS: ВЫКЛ";
-            if (myPosMarker) myMap.geoObjects.remove(myPosMarker);
-        } else {
-            btn.classList.add('active-btn');
-            watchId = navigator.geolocation.watchPosition(pos => {
-                const c = [pos.coords.latitude, pos.coords.longitude];
-                const acc = Math.round(pos.coords.accuracy);
-                btn.innerText = `🛰 ${acc}м`;
-                if (!myPosMarker) {
-                    myPosMarker = new ymaps.Placemark(c, {}, {preset: 'islands#personIcon', iconColor: '#ff0000'});
-                    myMap.geoObjects.add(myPosMarker);
-                } else { myPosMarker.geometry.setCoordinates(c); }
-                if (acc < 30) myMap.setCenter(c);
-            }, null, {enableHighAccuracy: true});
-        }
+        if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; btn.classList.remove('active-btn'); btn.innerText = "🛰 GPS: ВЫКЛ"; if (myPosMarker) myMap.geoObjects.remove(myPosMarker); } 
+        else { btn.classList.add('active-btn'); watchId = navigator.geolocation.watchPosition(pos => {
+            const c = [pos.coords.latitude, pos.coords.longitude];
+            btn.innerText = `🛰 ${Math.round(pos.coords.accuracy)}м`;
+            if (!myPosMarker) { myPosMarker = new ymaps.Placemark(c, {}, {preset: 'islands#personIcon', iconColor: '#ff0000'}); myMap.geoObjects.add(myPosMarker); } 
+            else { myPosMarker.geometry.setCoordinates(c); }
+        }, null, {enableHighAccuracy: true}); }
     }
-
     function toggleMenu() { document.getElementById('menu').classList.toggle('open'); }
-    async function sendToCloud() { try { fetch(CLOUD_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({states, notes}) }); } catch(e) {} }
-    async function manualSync() { 
-        try {
-            const r = await fetch(CLOUD_URL + '?t=' + Date.now());
-            const d = await r.json();
-            if (d.states) { states = d.states; notes = d.notes || {}; render(); alert("Данные загружены"); }
-        } catch(e) { alert("Ошибка связи"); }
-    }
 </script>
 </body>
 </html>
