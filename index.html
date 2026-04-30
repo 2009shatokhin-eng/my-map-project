@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>BANZAI CRM 2026</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#005cc5">
+    
     <script src="https://api-maps.yandex.ru/2.1/?apikey=50b1a67c-b3e5-433f-a378-4f8ff228e7d7&lang=ru_RU" type="text/javascript"></script>
     <style>
         :root { --panel-h: 70px; --accent: #005cc5; --red: #ff0000; --green: #28a745; --blue: #007bff; --gray: #777; }
@@ -12,11 +15,23 @@
         #map { width: 100vw; height: calc(100vh - var(--panel-h)); position: absolute; top: var(--panel-h); }
         button { height: 100%; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; }
         .active-btn { background: var(--accent) !important; border-color: #fff; }
+        
+        /* Стили для активных кнопок в балуне */
+        .btn-active-state { border: 2px solid white !important; opacity: 1 !important; box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        .btn-inactive-state { opacity: 0.5; border: 1px solid #444; }
+
         .task-counter { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; font-size: 10px; color: #aaa; }
         .task-counter b { font-size: 16px; color: #00ff00; }
-        #menu { position: fixed; right: -300px; top: 0; width: 280px; height: 100%; background: #1a1a1a; z-index: 2000; transition: 0.3s; padding: 20px; box-shadow: -10px 0 20px rgba(0,0,0,0.7); overflow-y: auto; box-sizing: border-box; border-left: 1px solid #333; }
+        
+        #menu { 
+            position: fixed; right: -300px; top: 0; width: 280px; height: 100%; 
+            background: #1a1a1a; z-index: 2000; transition: 0.3s; padding: 20px; 
+            box-shadow: -10px 0 20px rgba(0,0,0,0.7); overflow-y: auto; 
+            box-sizing: border-box; border-left: 1px solid #333; 
+        }
         #menu.open { right: 0; }
         .close-menu { position: absolute; top: 15px; right: 15px; font-size: 24px; color: #777; cursor: pointer; padding: 5px; }
+        
         .day-box { margin-bottom: 8px; border: 1px solid #333; border-radius: 5px; }
         .day-header { padding: 12px; background: #252525; cursor: pointer; display: flex; justify-content: space-between; font-size: 13px; }
         .day-header.viewing { border: 1px solid var(--blue); background: #002b5c; }
@@ -26,14 +41,24 @@
         .v-link { display: inline-block; padding: 5px 8px; margin: 2px; background: #333; border-radius: 4px; color: #fff; cursor: pointer; }
         .v-link.v-open { border-left: 3px solid var(--blue); }
         .v-link.v-close { border-left: 3px solid var(--red); }
-        .btn-reset-filter { width: 100%; height: 40px; margin-bottom: 15px; background: #333; color: #fff; border: 1px solid #555; border-radius: 6px; font-size: 11px; font-weight: bold; }
-        .note-card { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 12px; border-left: 3px solid var(--accent); }
-        .del-note { color: var(--red); float: right; cursor: pointer; font-weight: bold; }
-        .balloon-content { color: #000; min-width: 160px; padding: 2px; }
-        .note-input { width: 100%; height: 35px; margin: 4px 0; padding: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; resize: none; }
-        .btn-row { display: flex; gap: 4px; }
-        .btn-done { flex: 2; height: 36px; background: var(--green); color: #fff; border: none; border-radius: 4px; font-weight: bold; }
-        .btn-undo { flex: 1; height: 36px; background: #f0f0f0; border: 1px solid #ccc; color: #333; border-radius: 4px; font-size: 10px; }
+        .btn-reset-filter { width: 100%; height: 40px; margin-bottom: 12px; background: #333; color: #fff; border: 1px solid #555; border-radius: 6px; font-size: 11px; font-weight: bold; }
+
+        #notePanel {
+            position: fixed; bottom: -100%; left: 0; width: 100%; background: #1a1a1a;
+            border-top: 2px solid var(--accent); padding: 15px; box-sizing: border-box;
+            transition: bottom 0.3s ease; z-index: 3000; max-height: 45vh; overflow-y: auto;
+        }
+        #notePanel.open { bottom: 0; }
+        .note-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .note-input { width: 100%; height: 120px; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; resize: vertical; }
+        .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-save { flex: 1; height: 45px; background: var(--green); color: #fff; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; }
+        .btn-cancel { flex: 1; height: 45px; background: #444; color: #fff; border: none; border-radius: 6px; font-size: 15px; }
+
+        .menu-bottom-btn { width: 100%; height: 50px; margin-top: 20px; background: #333; color: #fff; border: 1px solid #555; border-radius: 6px; font-size: 15px; font-weight: bold; }
+        
+        .note-card { background: #222; padding: 10px; border-radius: 6px; margin-bottom: 8px; position: relative; font-size: 12px; border-left: 3px solid var(--accent); }
+        .del-note { position: absolute; top: 5px; right: 8px; color: #666; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -49,14 +74,33 @@
 
 <div id="menu">
     <div class="close-menu" onclick="toggleMenu()">✕</div>
-    <h3 style="margin: 0 0 20px 0; font-size:16px; color: #ccc;">ГРАФИК ОБХОДА</h3>
+    <h3 style="margin: 0 0 15px 0; font-size:16px; color: #ccc;">ГРАФИК ОБХОДА</h3>
+    <button id="allVentilsBtn" onclick="toggleAllVentils()" class="btn-reset-filter">ВСЕ ВЕНТИЛИ</button>
     <button onclick="closeDayView()" id="resetFilterBtn" class="btn-reset-filter" style="display:none;">СБРОСИТЬ ФИЛЬТР ДНЯ</button>
     <div id="daysList"></div>
     <h4 style="margin: 25px 0 10px 0; font-size: 14px; color: #888;">ЗАМЕТКИ</h4>
     <div id="notesList"></div>
+    <button onclick="toggleMenu()" class="menu-bottom-btn">ЗАКРЫТЬ МЕНЮ</button>
+</div>
+
+<div id="notePanel">
+    <div class="note-header">
+        <strong id="notePanelTitle">Вентиль V00</strong>
+        <span onclick="closeNotePanel()" style="font-size:24px; cursor:pointer; color:#777;">✕</span>
+    </div>
+    <textarea id="noteTextarea" class="note-input" placeholder="Введите заметку..."></textarea>
+    <div class="btn-row">
+        <button class="btn-save" onclick="saveNoteFromPanel()">СОХРАНИТЬ</button>
+        <button class="btn-cancel" onclick="closeNotePanel()">ОТМЕНА</button>
+    </div>
 </div>
 
 <script>
+    // Регистрация Service Worker для PWA
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(() => console.log("PWA Active"));
+    }
+
     const sched = {
         0:[3,5,6,8,13,14,16,17,20,28], 1:[3,5,6,8,13,14,16,18,28,29], 
         2:[4,5,6,8,13,14,18,28], 3:[3,5,6,8,13,14,16,19,21,22,23,28], 
@@ -76,6 +120,9 @@
 
     let myMap, watchId, myPosMarker;
     let isTmr = false, manualTmrOverride = false, selectedDay = null;
+    let showAllVentils = false;
+    let currentEditingId = null;
+
     let states = JSON.parse(localStorage.getItem('banzai_v19_s') || '{}');
     let notes = JSON.parse(localStorage.getItem('banzai_v19_n') || '{}');
     let pointObjects = {};
@@ -87,10 +134,7 @@
     });
 
     function checkAutoTime() {
-        if (!manualTmrOverride) {
-            isTmr = (new Date().getHours() >= 19);
-            updateTmrButtonUI();
-        }
+        if (!manualTmrOverride) { isTmr = (new Date().getHours() >= 19); updateTmrButtonUI(); }
     }
 
     function getDateKey() {
@@ -101,6 +145,8 @@
 
     function render() {
         myMap.geoObjects.removeAll();
+        if (myPosMarker) myMap.geoObjects.add(myPosMarker);
+
         pointObjects = {};
         const dateKey = getDateKey();
         const now = new Date();
@@ -112,55 +158,54 @@
 
         points.forEach(p => {
             const id = p[1], fullId = p[0] + id;
-            const isDone = states[dateKey + '_' + fullId] === 1;
+            const currentState = states[dateKey + '_' + fullId];
+            const isDone = currentState === 1;
+            const isUndone = currentState === 0;
             
-            let color = null; 
+            let color = null;
             let opacity = 1;
 
             if (selectedDay !== null) {
-                // РЕЖИМ ПРОСМОТРА ДНЯ
                 const sPrevIdx = (selectedDay - 1 + 7) % 7;
                 const inSelected = (sched[selectedDay] || []).includes(id);
                 const inPrev = (sched[sPrevIdx] || []).includes(id);
-
-                if (inSelected && !inPrev) { 
-                    color = '#007bff'; // Синий: Открыть
-                } else if (!inSelected && inPrev) { 
-                    color = '#ff0000'; // Красный: Закрыть
-                } else {
-                    // СЕРЫЕ МЕТКИ (состояние: Белый = открыт, Темный = закрыт)
-                    color = inSelected ? '#ffffff' : '#333333'; 
-                    opacity = 0.4;
-                }
+                if (inSelected && !inPrev) color = '#007bff';
+                else if (!inSelected && inPrev) color = '#ff0000';
+                else { color = inSelected ? '#ffffff' : '#333333'; opacity = 0.4; }
             } else {
-                // РАБОЧИЙ РЕЖИМ (Серые метки скрыты)
                 const planCurrent = sched[curIdx] || [];
                 const planPrevious = sched[prevIdx] || [];
                 const inToday = planCurrent.includes(id);
                 const inYesterday = planPrevious.includes(id);
 
-                if (inToday && !inYesterday) { 
-                    color = isDone ? '#28a745' : '#007bff'; 
-                    if(!isDone) count++; 
-                }
-                else if (!inToday && inYesterday) { 
-                    color = isDone ? '#28a745' : '#ff0000'; 
-                    if(!isDone) count++; 
+                if (showAllVentils || (inToday || inYesterday)) {
+                    if (inToday && !inYesterday) {
+                        color = isDone ? '#28a745' : '#007bff';
+                        if(!isDone && !showAllVentils) count++;
+                    }
+                    else if (!inToday && inYesterday) {
+                        color = isDone ? '#28a745' : '#ff0000';
+                        if(!isDone && !showAllVentils) count++;
+                    }
+                    else if (showAllVentils) { color = '#666666'; opacity = 0.45; }
                 }
             }
 
             if (color) {
                 const placemark = new ymaps.Placemark([p[2], p[3]], {
-                    balloonContent: `<div class="balloon-content"><b>Вентиль V${id}</b>
-                        <textarea class="note-input" id="ni_${fullId}" placeholder="Заметка...">${notes[fullId] || ''}</textarea>
-                        <div class="btn-row"><button class="btn-done" onclick="saveData('${fullId}', 1)">ГОТОВО</button>
-                        <button class="btn-undo" onclick="saveData('${fullId}', 0)">В РАБОТУ</button></div></div>`
-                }, { 
-                    preset: 'islands#dotIcon', 
-                    iconColor: color, 
-                    balloonAutoPan: false,
-                    opacity: opacity
-                });
+                    balloonContent: `
+                        <div class="balloon-content" style="min-width:180px; color:#333;">
+                            <b style="font-size:16px;">Вентиль V${id}</b><br><br>
+                            <div class="btn-row" style="display:flex; gap:6px; margin:8px 0;">
+                                <button class="${isDone ? 'btn-active-state' : 'btn-inactive-state'}" onclick="saveData('${fullId}', 1)" style="flex:1; background:#28a745; height:40px;">ГОТОВО</button>
+                                <button class="${isUndone ? 'btn-active-state' : 'btn-inactive-state'}" onclick="saveData('${fullId}', 0)" style="flex:1; background:#777; color:#fff; height:40px;">ОТМЕНА</button>
+                            </div>
+                            <button onclick="openNotePanel('${fullId}')" style="width:100%; padding:10px; background:#005cc5; color:white; border:none; border-radius:4px; font-weight:bold; margin-top:6px;">
+                                РЕДАКТИРОВАТЬ ЗАМЕТКУ
+                            </button>
+                        </div>`
+                }, { preset: 'islands#dotIcon', iconColor: color, balloonAutoPan: true, opacity: opacity });
+
                 myMap.geoObjects.add(placemark);
                 pointObjects[id] = placemark;
             }
@@ -172,11 +217,52 @@
     }
 
     function saveData(id, status) {
-        notes[id] = document.getElementById('ni_'+id).value;
         states[getDateKey() + '_' + id] = status;
         localStorage.setItem('banzai_v19_s', JSON.stringify(states));
-        localStorage.setItem('banzai_v19_n', JSON.stringify(notes));
         myMap.balloon.close();
+        render();
+    }
+
+    function openNotePanel(fullId) {
+        currentEditingId = fullId;
+        document.getElementById('notePanelTitle').innerText = `Вентиль ${fullId}`;
+        document.getElementById('noteTextarea').value = notes[fullId] || '';
+        document.getElementById('notePanel').classList.add('open');
+        setTimeout(() => document.getElementById('noteTextarea').focus(), 300);
+    }
+
+    function closeNotePanel() { document.getElementById('notePanel').classList.remove('open'); currentEditingId = null; }
+
+    function saveNoteFromPanel() {
+        if (!currentEditingId) return;
+        notes[currentEditingId] = document.getElementById('noteTextarea').value.trim();
+        localStorage.setItem('banzai_v19_n', JSON.stringify(notes));
+        closeNotePanel();
+        render();
+    }
+
+    function toggleGPS() {
+        const btn = document.getElementById('gpsBtn');
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null; btn.classList.remove('active-btn'); btn.innerText = "🛰 GPS: ВЫКЛ";
+        } else {
+            btn.classList.add('active-btn'); btn.innerText = "🛰 GPS: ...";
+            watchId = navigator.geolocation.watchPosition(pos => {
+                const c = [pos.coords.latitude, pos.coords.longitude];
+                btn.innerText = `🛰 ${Math.round(pos.coords.accuracy)}м`;
+                if (!myPosMarker) {
+                    myPosMarker = new ymaps.Placemark(c, {}, { preset: 'islands#personIcon', iconColor: '#ff0000' });
+                    myMap.geoObjects.add(myPosMarker);
+                } else { myPosMarker.geometry.setCoordinates(c); }
+                if (!myPosMarker._centered) { myMap.setCenter(c, 17, {duration: 400}); myPosMarker._centered = true; }
+            }, null, {enableHighAccuracy: true});
+        }
+    }
+
+    function toggleAllVentils() {
+        showAllVentils = !showAllVentils;
+        document.getElementById('allVentilsBtn').innerText = showAllVentils ? "ТОЛЬКО ЗАДАЧИ" : "ВСЕ ВЕНТИЛИ";
         render();
     }
 
@@ -188,7 +274,6 @@
             const prev = (i - 1 + 7) % 7;
             const toOpen = sched[i].filter(v => !sched[prev].includes(v));
             const toClose = sched[prev].filter(v => !sched[i].includes(v));
-
             h += `<div class="day-box"><div class="day-header ${isSelected ? 'viewing' : ''}" onclick="selectDay(${i})">
                   <span>${name}</span> <span>${toOpen.length + toClose.length} задач</span></div>
                   <div class="day-content" style="display: ${isSelected ? 'block' : 'none'}">
@@ -199,45 +284,42 @@
                   </div></div>`;
         });
         document.getElementById('daysList').innerHTML = h;
+
         let nh = '', nc = 0;
-        for (let id in notes) { if (notes[id]) { nc++; const numId = id.replace(/\D/g,'');
-            nh += `<div class="note-card" onclick="focusV(${numId})"><span class="del-note" onclick="event.stopPropagation(); deleteNote('${id}')">✕</span><b>${id}:</b> ${notes[id]}</div>`; 
-        } }
+        for (let id in notes) { 
+            if (notes[id]) { 
+                nc++; 
+                const numId = id.replace(/\D/g,'');
+                nh += `<div class="note-card" onclick="focusV(${numId}); openNotePanel('${id}')">
+                    <span class="del-note" onclick="event.stopPropagation(); deleteNote('${id}')">✕</span>
+                    <b>${id}:</b> ${notes[id]}
+                </div>`; 
+            } 
+        }
         document.getElementById('notesList').innerHTML = nh || '<div style="color:#444">Заметок нет</div>';
         document.getElementById('menuBadge').style.display = nc > 0 ? 'block' : 'none';
     }
 
-    function toggleTomorrowManually() { manualTmrOverride = true; isTmr = !isTmr; selectedDay = null; updateTmrButtonUI(); render(); }
-    function updateTmrButtonUI() { document.getElementById('tmrBtn').classList.toggle('active-btn', isTmr); }
-    function selectDay(idx) { selectedDay = (selectedDay === idx) ? null : idx; render(); }
-    function closeDayView() { selectedDay = null; render(); }
-    
     function focusV(id) {
         if (!pointObjects[id]) { selectedDay = null; render(); }
         setTimeout(() => {
             if (pointObjects[id]) {
                 const coords = pointObjects[id].geometry.getCoordinates();
                 myMap.setCenter(coords, 18, {duration: 300});
-                pointObjects[id].balloon.open().then(() => {
-                    const inp = document.getElementById('ni_V'+id);
-                    if(inp) setTimeout(() => inp.focus(), 300);
-                });
+                pointObjects[id].balloon.open();
                 if (window.innerWidth < 600) document.getElementById('menu').classList.remove('open');
             }
         }, 150);
     }
 
-    function deleteNote(id) { notes[id] = ""; localStorage.setItem('banzai_v19_n', JSON.stringify(notes)); updateMenu(); render(); }
-    function toggleGPS() {
-        const btn = document.getElementById('gpsBtn');
-        if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; btn.classList.remove('active-btn'); btn.innerText = "🛰 GPS: ВЫКЛ"; if (myPosMarker) myMap.geoObjects.remove(myPosMarker); } 
-        else { btn.classList.add('active-btn'); watchId = navigator.geolocation.watchPosition(pos => {
-            const c = [pos.coords.latitude, pos.coords.longitude];
-            btn.innerText = `🛰 ${Math.round(pos.coords.accuracy)}м`;
-            if (!myPosMarker) { myPosMarker = new ymaps.Placemark(c, {}, {preset: 'islands#personIcon', iconColor: '#ff0000'}); myMap.geoObjects.add(myPosMarker); } 
-            else { myPosMarker.geometry.setCoordinates(c); }
-        }, null, {enableHighAccuracy: true}); }
+    function deleteNote(id) {
+        notes[id] = ""; localStorage.setItem('banzai_v19_n', JSON.stringify(notes)); updateMenu(); render();
     }
+
+    function toggleTomorrowManually() { manualTmrOverride = true; isTmr = !isTmr; selectedDay = null; updateTmrButtonUI(); render(); }
+    function updateTmrButtonUI() { document.getElementById('tmrBtn').classList.toggle('active-btn', isTmr); }
+    function selectDay(idx) { selectedDay = (selectedDay === idx) ? null : idx; render(); }
+    function closeDayView() { selectedDay = null; render(); }
     function toggleMenu() { document.getElementById('menu').classList.toggle('open'); }
 </script>
 </body>
